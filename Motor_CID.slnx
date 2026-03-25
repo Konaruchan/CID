@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Motor_CID/Motor_CID.vcxproj" Id="d592df52-c95c-42ad-b186-352a54889700" />
+</Solution>

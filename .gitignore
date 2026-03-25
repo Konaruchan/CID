@@ -1,0 +1,55 @@
+# =========================
+# Visual Studio
+# =========================
+.vs/
+*.VC.db
+*.VC.opendb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# =========================
+# Compilación / binarios
+# =========================
+Debug/
+Release/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+*.obj
+*.pch
+*.pdb
+*.ilk
+*.idb
+*.ipdb
+*.iobj
+*.exe
+*.dll
+*.lib
+*.exp
+
+# =========================
+# Logs / temporales
+# =========================
+*.log
+*.tmp
+*.cache
+
+# =========================
+# Archivos de sistema
+# =========================
+Thumbs.db
+Desktop.ini
+
+# =========================
+# Configuración local del usuario
+# =========================
+keyboard-calibration.json
+
+# =========================
+# NO ignorar archivos importantes del proyecto
+# =========================
+!keyboard-layout.json
+!cid0.cid

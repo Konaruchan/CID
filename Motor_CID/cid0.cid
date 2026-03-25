@@ -1,0 +1,695 @@
+﻿I1 | . | -1
+I2 | , | -1
+I3 | : | -1
+C1 | ; | -1
+C2 | ? | -1
+D1 | ! | -1
+D2 | - | -1
+D3 | ( | -1
+I4 | ) | -1
+I5 | @ | -1
+I6 | / | -1
+C3 | % | -1
+D4 | a | 1
+D5 | e | 1
+D6 | i | 1
+I7 | o | 1
+I8 | u | 1
+C4 | y | -1
+C5 | b | -1
+D7 | c | -1
+D8 | d | -1
+I9 | s | -1
+I10 | h | -1
+C6 | n | -1
+D9 | m | -1
+D10 | r | -1
+D4+D10 | p | -1
+C1+D7 | l | -1
+C2+D6 | f | -1
+C2+D7 | g | -1
+C2+D2 | z | -1
+D7+C6 | j | -1
+I6+D10 | k | -1
+C3+I8 | t | -1
+I5+C6 | ñ | -1
+I5+I9 | q | -1
+I2+I7 | v | -1
+I6+I9 | w | -1
+C1+C5 | x | -1
+
+C1+D1 | ae | 1
+I5+D9 | ai | 1
+D1+C5 | ao | 1
+C2+D8 | au | 1
+
+C1+D5 | ea | 2
+D4+D9 | ei | 2
+C4+D7 | eo | 2
+C3+I10 | eu | 2
+
+C2+C5 | ia | 2
+D3+D8 | ie | 2
+D6+D7 | io | 2
+D4+D6 | iu | 2
+
+I1+I8 | oa | 2
+I1+C4 | oe | 2
+D4+C6 | oi | 2
+D5+D9 | ou | 2
+
+C5+I10 | ua | 2
+I8+C5 | ue | 2
+I3+I7 | ui | 2
+I8+D9 | uo | 2
+
+C6+D10 | ba | 1
+D8+D9 | be | 1
+I7+C6 | bi | 1
+C2+I6 | bo | 1
+I5+I10 | bu | 1
+
+D5+D10 | ca | 1
+C4+I9 | co | 1
+I2+C5 | cu | 1
+I1+I6 | ce | 1
+C3+D8 | ci | 1
+
+C1+C4 | da | 1
+I5+C3 | de | 1
+I6+I10 | di | 1
+I2+I8 | do | 1
+I4+I10 | du | 1
+
+I5+C5 | fa | 1
+C3+D5 | fe | 1
+I2+C1 | fi | 1
+D5+C5 | fo | 1
+I4+I6 | fu | 1
+
+C2+C4 | ga | 1
+D3+D5 | go | 1
+D1+D8 | gu | 1
+D1+D7 | gue | 2
+I3+C5 | gui | 2
+
+I4+I9 | ja | 1
+C3+D10 | je | 1
+D4+C4 | ji | 1
+I10+D9 | jo | 1
+D6+D10 | ju | 1
+
+I2+C3 | ka | 1
+C1+I5 | ke | 1
+I3+I8 | ki | 1
+I3+D4 | ko | 1
+I1+I3 | ku | 1
+
+C3+D9 | la | 1
+I6+D9 | le | 1
+C1+I8 | li | 1
+I9+C6 | lo | 1
+I2+C4 | lu | 1
+
+I6+C6 | ll | -1
+D1+D3 | lla | 1
+I3+I4 | lle | 1
+D1+C3 | lli | 1
+I6+D4 | llo | 1
+C1+D8 | llu | 1
+
+I7+C4 | ma | 1
+I3+C2 | me | 1
+C5+D8 | mi | 1
+D2+D4 | mo | 1
+C4+D10 | mu | 1
+
+D2+D7 | na | 1
+I3+D7 | ne | 1
+I3+C4 | ni | 1
+I6+D7 | no | 1
+I1+I7 | nu | 1
+
+I4+C4 | ña | 1
+I6+I7 | ñe | 1
+I4+C6 | ñi | 1
+D2+D8 | ño | 1
+C3+C6 | ñu | 1
+
+I7+I8 | pa | 1
+D7+D8 | pe | 1
+C2+D4 | pi | 1
+C2+C3 | po | 1
+D4+D7 | pu | 1
+
+I5+I7 | que | 2
+D7+D9 | qui | 2
+
+I6+C4 | ra | 1
+I2+I4 | re | 1
+C1+I6 | ri | 1
+I1+I5 | ro | 1
+D7+D10 | ru | 1
+I1+I4 | rr | -1
+D1+D2 | rra | 1
+I2+I6 | rre | 1
+D2+D5 | rri | 1
+I9+I10 | rro | 1
+C1+D4 | rru | 1
+
+I4+I7 | sa | 1
+I8+I10 | se | 1
+I3+C1 | si | 1
+C4+C6 | so | 1
+D8+D10 | su | 1
+
+I7+I9 | ta | 1
+I5+I6 | te | 1
+I8+C4 | ti | 1
+I6+C3 | to | 1
+I10+C6 | tu | 1
+
+C2+D5 | va | 1
+I3+I6 | ve | 1
+I4+I5 | vi | 1
+C1+C3 | vo | 1
+D5+D8 | vu | 1
+
+D4+D8 | ya | 1
+I5+I8 | ye | 1
+D1+D6 | yi | 1
+D6+D8 | yo | 1
+C2+D1 | yu | 1
+
+I1+I2 | za | 1
+C1+C2 | ze | 1
+D5+D6 | zi | 1
+C4+C5 | zo | 1
+C5+D9 | zu | 1
+
+I5+C4 | cha | 1
+D3+D6 | che | 1
+D4+D5 | chi | 1
+C6+D9 | cho | 1
+I2+I3 | chu | 1
+
+C3+D7 | bla | 1
+I8+C6 | ble | 1
+D9+D10 | bli | 1
+I3+C3 | blo | 1
+D2+D6 | blu | 1
+
+C5+D7 | bra | 1
+I3+I5 | bre | 1
+D1+D5 | bri | 1
+D1+D4 | bro | 1
+I6+C5 | bru | 1
+
+I8+I9 | cla | 1
+I6+I8 | cle | 1
+C5+D10 | cli | 1
+I4+I8 | clo | 1
+D4+C5 | clu | 1
+
+I7+I10 | cra | 1
+I2+I5 | cre | 1
+C3+C4 | cri | 1
+C4+I10 | cro | 1
+C4+D9 | cru | 1
+
+D2+D3 | dra | 1
+D5+D7 | dre | 1
+C3+D4 | dri | 1
+C3+C5 | dro | 1
+C5+C6 | dru | 1
+
+I1+C1 | fla | 1
+I2+C2 | fle | 1
+D3+D7 | fli | 1
+D2+D9 | flo | 1
+D2+C3 | flu | 1
+
+C5+I9 | fra | 1
+I10+D10 | fre | 1
+I2+D7 | fri | 1
+C1+I9 | fro | 1
+I3+D8 | fru | 1
+
+C1+C6 | gla | 1
+I5+D10 | gle | 1
+D1+D10 | gli | 1
+I7+C5 | glo | 1
+D3+D4 | glu | 1
+
+C3+I7 | gra | 1
+I3+D1 | gre | 1
+D2+C5 | gri | 1
+D5+C4 | gro | 1
+I3+D10 | gru | 1
+
+C2+I8 | pla | 1
+I3+C6 | ple | 1
+I3+D9 | pli | 1
+I7+D9 | plo | 1
+D1+C6 | plu | 1
+
+C1+D9 | pra | 1
+C1+D2 | pre | 1
+I3+D5 | pri | 1
+I4+C5 | pro | 1
+I1+C6 | pru | 1
+
+I1+C5 | tla | 1
+D1+D9 | tle | 1
+D6+D9 | tli | 1
+I5+D4 | tlo | 1
+I4+C3 | tlu | 1
+
+I2+D4 | tra | 1
+C1+D10 | tre | 1
+I2+I9 | tri | 1
+C3+D6 | tro | 1
+C1+I10 | tru | 1
+
+C2+I5 | ar | -1
+I8+D10 | er | -1
+I8+D7 | ir | -1
+
+I2+I10 | as | 1
+I1+C3 | es | 1
+I2+D9 | is | 1
+C2+D10 | os | 1
+
+I1+D9 | an | 1
+C2+D9 | en | 1
+C1+D6 | on | 1
+
+D6+C5 | ado | -1
+C2+I10 | ido | -1
+C3+I9 | ando | -1
+I3+I10 | iendo | -1
+
+I2+D10 | amos | -1
+D2+D10 | emos | -1
+C1+I4 | imos | -1
+
+D1+C4 | ste | -1
+I1+I10 | aste | -1
+D3+D10 | iste | -1
+
+I6+D5 | aron | -1
+D7+I10 | ron | -1
+
+I4+D9 | aba | -1
+C2+C6 | aban | -1
+
+I5+D7 | ía | 0
+D8+C6 | ían | 0
+I2+C6 | ría | 0
+C2+D3 | rían | 0
+
+I6+D8 | ción | 0
+C4+D8 | sión | 0
+D4+I8 | ación | 0
+I1+I9 | ición | 0
+D1+I6 | ución | 0
+D5+C6 | ización | 0
+
+D4+I10 | miento | -1
+C1+I7 | amiento | -1
+I9+D9 | imiento | -1
+
+I3+I9 | dad | -1
+D5+I10 | idad | -1
+C2+I7 | tud | -1
+D2+C4 | ez | -1
+I4+D10 | eza | -1
+I3+D2 | ura | -1
+D3+C3 | mente | -1
+
+I1+C2 | dor | -1
+D3+D9 | dora | -1
+I2+D5 | ero | -1
+I1+D7 | era | -1
+
+I6+D6 | ista | -1
+I4+D7 | ismo | -1
+
+I8+D8 | oso | -1
+D6+C4 | osa | -1
+D8+I10 | ísimo | 0
+I7+D10 | ísima | 0
+
+I2+D1 | able | -1
+D2+C6 | ible | -1
+I7+D7 | al | -1
+
+I5+D8 | ito | -1
+I1+D4 | ita | -1
+C2+I4 | illo | -1
+D6+C6 | illa | -1
+C1+D3 | ico | -1
+I2+D8 | ica | -1
+
+D1+I10 | ona | -1
+D2+I6 | azo | -1
+C2+I9 | aza | -1
+D4+I9 | ote | -1
+I9+D10 | ota | -1
+
+I4+D4 | anza | -1
+D1+I8 | encia | -1
+D7+I9 | ancia | -1
+I1+D10 | aje | -1
+
+D4+I7 | ario | -1
+I5+D5 | aria | -1
+
+D5+I8 | el | 1
+D1+I5 | un | -1
+D3+C5 | una | -1
+I3+D6 | los | -1
+D1+I7 | las | -1
+D5+I9 | del | -1
+I2+D6 | con | -1
+I1+D5 | por | -1
+I5+D6 | como | 1
+D1+I4 | para | -1
+I7+D8 | pero | -1
+
+D5+I7 | bien | -1
+D3+C6 | aqui | 3
+D3+C4 | asi | 2
+I1+D8 | eso | -1
+I4+D8 | bueno | -1
+D2+I10 | algo | -1
+I4+D5 | mas | 1
+D2+I5 | ahora | -1
+
+I3+D3 | creo | -1
+I2+D2 | esto | -1
+D6+I8 | cas | -1
+D6+I10 | muy | -1
+D1+I9 | todo | -1
+D8+I9 | alguien | -1
+D3+I6 | estoy | -1
+I1+D1 | cosa | -1
+
+D2+I8 | acord | -1
+
+D2+I4 | hay | -1
+D3+I10 | vamos | -1
+D6+I7 | dec | -1
+
+D3+I8 | ahi | 2
+
+I1+D6 | dia | 2
+
+I4+D6 | antes | -1
+D2+I9 | nada | -1
+I1+D2 | gracias | -1
+
+D2+I7 | solo | 1
+
+D6+I9 | ten | -1
+D3+I5 | puedo | -1
+
+I2+D3 | dijo | -1
+I1+D3 | claro | -1
+D3+I7 | hola | -1
+D3+I9 | este | -1
+D3+I4 | quiero | -1
+I3+I7+C4 | tiene | -1
+
+C1+I5+C5 | amig | -1
+I2+C3+I8 | hac | -1
+C3+I10+D9 | ella | -1
+I3+C2+C4 | soy | -1
+D1+D3+D8 | ser | -1
+
+I6+D4+D9 | después | 0
+
+I5+I9+C6 | vez | -1
+I6+D7+C6 | desde | -1
+I4+I6+I10 | alli | 2
+
+I3+C2+C5 | crees | -1
+C1+D1+D7 | eres | -1
+I4+I6+I9 | ha | -1
+I6+I9+C6 | dios | -1
+C3+I8+D9 | porque | -1
+C3+D5+D9 | sabes | -1
+I5+C3+C6 | son | -1
+
+C2+C5+D8 | aun | 2
+
+C2+I6+D7 | buen | -1
+I5+C3+I10 | conmigo | -1
+C2+D2+D7 | contigo | -1
+
+I3+C2+D7 | deb | -1
+
+I2+C1+C5 | algun | -1
+I2+C1+C4 | cada | -1
+I1+I3+I8 | cariño | -1
+I2+I7+C4 | ciert | -1
+D4+C6+D10 | auto | -1
+
+I6+I10+D9 | ese | -1
+C1+D1+C5 | entonces | -1
+C1+C4+D7 | donde | 1
+I1+I3+C4 | dos | -1
+
+I5+I10+D9 | favor | -1
+C2+C4+D7 | esa | -1
+I4+I9+C6 | much | -1
+I1+I6+I7 | mejor | -1
+I4+C4+I9 | he | -1
+D1+C5+D8 | hombr | -1
+I5+C5+I10 | hasta | -1
+I4+I6+C6 | quien | 2
+I1+I7+C4 | voy | -1
+C1+D1+D8 | quier | -1
+C1+D5+C5 | verdad | -1
+C1+I8+C5 | tiemp | -1
+I3+I8+C5 | nunca | -1
+C3+D8+D9 | sus | -1
+I2+C1+I8 | sient | -1
+I6+I7+C6 | pued | -1
+C3+D5+D10 | sobre | -1
+I3+I4+C4 | dig | -1
+I3+C4+D7 | cuent | -1
+I6+D4+C6 | amor | -1
+I6+C6+D10 | cual | 1
+I5+C3+D9 | demasiad | -1
+C3+C6+D10 | adiós | 0
+D1+C3+D8 | cabez | -1
+C2+D6+D7 | cuanto | 2
+D4+D6+D10 | casi | -1
+C1+C5+D8 | año | -1
+I3+D4+C4 | ayud | -1
+I2+I8+C5 | chic | -1
+I1+I3+I7 | cualquier | -1
+C2+D2+D8 | déjame | 0
+D4+C4+D10 | camin | -1
+I6+D4+D10 | allá | 0
+C2+I8+C5 | contra | -1
+D3+D5+D10 | diabl | -1
+C2+I5+C5 | clas | -1
+I2+C3+D9 | dej | -1
+I6+D5+D9 | cinco | -1
+C1+I5+D9 | dentro | -1
+D1+D8+D9 | dich | -1
+I4+I6+D9 | cuando | 2
+I4+C5+I10 | adelante | -1
+C2+I6+D8 | difícil | 0
+I2+C4+D10 | ciudad | -1
+I3+D4+D9 | mis | -1
+C2+I6+D10 | gent | -1
+I3+D4+I8 | noch | -1
+C2+D6+D10 | mir | -1
+C3+D5+C6 | habl | -1
+D1+C3+D9 | nadie | -1
+I3+I4+I9 | mama | 2
+C3+D8+C6 | hech | -1
+I3+I7+C6 | nosotr | -1
+I3+C2+D8 | mism | -1
+C2+D7+C6 | has | -1
+I4+C3+C6 | diner | -1
+C2+I6+C6 | necesit | -1
+I1+C1+I8 | lugar | -1
+C2+C4+D8 | hij | -1
+I5+D7+C6 | ellos | -1
+I3+I8+D9 | moment | -1
+C1+C4+D8 | hab | -1
+I3+C5+D8 | mío | 0
+C2+I6+I10 | esper | -1
+I5+I9+D9 | mañan | -1
+I3+I8+D7 | luego | -1
+I2+C1+D7 | fuera | -1
+I4+I10+D9 | madr | -1
+I4+C3+I10 | menos | -1
+D1+C4+D7 | gust | -1
+I5+C6+D10 | estad | -1
+I1+I6+D9 | hoy | -1
+I1+C3+I8 | mund | -1
+I2+D4+C4 | gran | -1
+I6+I10+D10 | mal | -1
+I1+I7+C6 | mierd | -1
+C1+I4+C4 | mujer | -1
+I5+C5+I9 | vid | -1
+D1+C3+D10 | ver | -1
+C1+I5+D7 | también | 0
+C3+D6+D10 | sin | -1
+D1+D7+C6 | señor | -1
+I3+C5+I10 | siempre | -1
+I6+D4+I10 | uno | -1
+I1+I8+C5 | sea | -1
+I3+I7+C5 | parec | -1
+
+I1+I6+I10 | mañana | -1
+I2+I7+C6 | acuerdo | -1
+D2+C3+D8 | am | -1
+
+C2+C5+I10 | usted | -1
+C1+C5+I10 | ustedes | -1
+
+D1+C3+C6 | poc | -1
+I2+C4+I9 | otr | -1
+D2+D4+D10 | trabaj | -1
+I3+I4+I10 | tal | -1
+I3+C4+I9 | vas | -1
+
+I3+C2+I8 | oye | -1
+
+D4+I10+D9 | padr | -1
+I2+C2+C5 | papa | 2
+I2+C5+I10 | pas | -1
+
+I5+C3+I9 | podr | -1
+
+I6+I9+D9 | tip | -1
+I2+C3+I10 | tus | -1
+
+C1+D5+D10 | segur | -1
+I2+C3+D10 | pod | -1
+
+C1+D2+D7 | sab | -1
+I1+I3+C5 | nuev | -1
+I3+I4+C6 | nuestr | -1
+
+C2+I6+D9 | tres | -1
+I5+C3+D10 | seri | -1
+D1+D3+D7 | problem | -1
+
+D5+C6+D10 | tien | -1
+
+C2+D2+C5 | sera | 2
+
+I2+I7+C5 | quiza | 2
+I1+I6+I9 | cuidad | -1
+I5+D4+C6 | cerc | -1
+
+D5+C4+D10 | baj | -1
+C3+I10+D10 | corazon | 3
+
+I2+C1+I7 | agua | -1
+I3+C4+D10 | cuatro | -1
+I2+I8+D9 | aunque | -1
+
+I3+D7+C6 | dame | -1
+C1+I8+D9 | car | -1
+I1+I6+C6 | atrás | 0
+I3+D5+C5 | arrib | -1
+I3+I4+C5 | ay | -1
+
+C2+D3+D8 | bebe | 2
+D2+D4+D9 | dime | -1
+
+C3+I7+C6 | conozco | -1
+I6+D7+I10 | caraj | -1
+
+C3+I9+C6 | bastant | -1
+D4+I8+D9 | bast | -1
+
+C1+D5+C4 | cuerp | -1
+D1+I6+D7 | afuer | -1
+C3+I8+D10 | culp | -1
+I2+C3+I7 | arm | -1
+I5+D4+D9 | abaj | -1
+
+C1+D1+C4 | comid | -1
+I6+I7+D9 | com | -1
+
+C1+D8+D9 | alla | 2
+
+C1+C4+I9 | import | -1
+I1+C4+I9 | nombr | -1
+I3+D1+C5 | idea | -1
+
+D2+C5+D8 | hora | -1
+C1+D6+D7 | hizo | -1
+I3+D1+D7 | hice | -1
+
+I2+C2+C4 | famil | -1
+I2+C4+D7 | genial | -1
+
+C1+I5+I10 | entre | -1
+I3+D4+C6 | herman | -1
+
+I1+I8+D9 | estas | 2
+I1+C1+C4 | lad | -1
+
+C1+I5+C6 | form | -1
+D4+D6+D9 | minut | -1
+C1+D2+D8 | mientras | -1
+I2+C3+C6 | entend | -1
+
+C1+D7+C6 | muert | -1
+C1+I8+D7 | espos | -1
+C1+I7+C4 | iba | -1
+
+I6+D8+D9 | hiciste | -1
+C2+C4+D10 | histori | -1
+
+C1+C4+D10 | hare | 2
+C2+D6+C5 | hemos | -1
+
+C2+D8+D9 | niñ | -1
+D2+D8+D9 | important | -1
+C1+I5+I9 | junt | -1
+C1+D5+D9 | feliz | -1
+
+I3+D4+D10 | hacia | 2
+I6+D5+D10 | real | -1
+I1+I3+I9 | part | -1
+I1+C1+C5 | razon | 2
+
+I3+C2+C6 | veces | -1
+I3+C2+D9 | sido | -1
+
+I4+C5+I9 | tant | -1
+I3+D8+D9 | ven | -1
+I3+D4+I10 | tard | -1
+C1+D6+C5 | pens | -1
+C2+D8+C6 | sal | -1
+
+C1+I8+D10 | vaya | -1
+I4+I9+D9 | visto | -1
+I4+C3+D9 | veo | -1
+I3+D1+C4 | van | -1
+I3+D5+D10 | ves | -1
+
+D1+I6+D9 | oh | -1
+C1+C6+D10 | todavía | 0
+C1+D8+C6 | seman | -1
+
+I3+C4+D8 | policía | 0
+
+C1+I10+D9 | somos | -1
+D1+I6+C6 | supong | -1
+D1+I6+D8 | pues | -1
+
+I1+C3+I7 | puert | -1
+I2+C2+I8 | primer | -1
+C1+D2+C5 | sabia | 2
