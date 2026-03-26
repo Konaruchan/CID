@@ -1,13 +1,15 @@
+// CID-19-01 : Previene inclusiones múltiples de la interfaz pública del panel de contexto de texto.
 #pragma once
+
+// CID-19-02 : Incluye los tipos base de Windows usados por la API del observador de contexto.
 #include <windows.h>
 
-// Inicia / detiene el observador de contexto de texto.
+// CID-19-03 : Declara el arranque y la detención del observador de contexto de texto editable.
 bool IniciarPanelContextoTexto();
 void DetenerPanelContextoTexto();
 
-// Fuerza una actualización inmediata del contexto.
+// CID-19-04 : Declara la actualización inmediata del contexto sin esperar al temporizador periódico.
 void ActualizarPanelContextoTextoAhora();
 
-// Se llama cuando el usuario pulsa algo potencialmente escribible.
-// El panel no debe aparecer solo por foco/cursor: necesita actividad reciente.
+// CID-19-05 : Declara la notificación de actividad escribible reciente para habilitar la aparición del panel.
 void NotificarActividadEscribiblePanelContextoTexto();

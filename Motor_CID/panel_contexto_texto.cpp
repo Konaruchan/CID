@@ -1,13 +1,19 @@
+// CID-18-01 : Inclusión de la implementación del panel de contexto de texto del sistema CID.
 #include "panel_contexto_texto.h"
+
+// CID-18-02 : Inclusión de la superposición visual controlada por el detector de contexto editable.
 #include "superposicion_cid.h"
 
+// CID-18-03 : Inclusión de cabeceras del sistema, UI Automation y utilidades de texto.
 #include <windows.h>
 #include <UIAutomation.h>
 #include <string>
 
+// CID-18-04 : Vinculación explícita de bibliotecas necesarias para UI Automation y COM.
 #pragma comment(lib, "Uiautomationcore.lib")
 #pragma comment(lib, "Ole32.lib")
 
+// CID-18-05 : Estado global de sincronización y ciclo de vida del panel de contexto.
 static CRITICAL_SECTION g_cs;
 static bool g_cs_iniciado = false;
 
@@ -15,10 +21,12 @@ static HANDLE g_timerQueue = nullptr;
 static HANDLE g_timer = nullptr;
 static bool g_iniciado = false;
 
+// CID-18-06 : Parámetros temporales de chequeo, debounce de aparición y ventana de activación por input.
 static const DWORD CHEQUEO_MS = 40;
 static const ULONGLONG DEBOUNCE_MOSTRAR_MS = 80;
 static const ULONGLONG VENTANA_ACTIVACION_MS = 900;
 
+// CID-18-07 : Último estado visible aplicado y últimos datos de foco, rectángulo y logging.
 static bool g_ultimo_visible = false;
 static RECT g_ultimo_rect{ 0,0,0,0 };
 static HWND g_ultimo_hwnd_foreground = nullptr;
@@ -26,8 +34,10 @@ static HWND g_ultimo_hwnd_focus = nullptr;
 static std::wstring g_ultima_clase_log;
 static std::wstring g_ultimo_origen_log;
 
+// CID-18-08 : Marca temporal del último input realmente escribible detectado.
 static ULONGLONG g_ultimo_input_escribible_tick = 0;
 
+// CID-18-09 : Estructura del contexto de texto detectado en un momento dado.
 struct ContextoTextoDetectado
 {
     bool visible = false;
@@ -38,21 +48,18 @@ struct ContextoTextoDetectado
     std::wstring origen;
 };
 
+// CID-18-10 : Estado del candidato pendiente antes de mostrar el panel tras debounce.
 static bool g_tenemos_candidato = false;
 static ContextoTextoDetectado g_candidato;
 static ULONGLONG g_candidato_tick = 0;
 
-// ------------------------------------------------------------
-// Logging
-// ------------------------------------------------------------
+// CID-18-11 : Envía mensajes de depuración del panel de contexto al visor de salida de Windows.
 static void Log(const std::wstring& s)
 {
     OutputDebugStringW((s + L"\n").c_str());
 }
 
-// ------------------------------------------------------------
-// Helpers
-// ------------------------------------------------------------
+// CID-18-12 : Libera de forma segura una interfaz COM y la pone a null.
 template<typename T>
 static void SafeRelease(T*& p)
 {
@@ -63,11 +70,13 @@ static void SafeRelease(T*& p)
     }
 }
 
+// CID-18-13 : Devuelve el valor absoluto entero usado en comparaciones geométricas.
 static int AbsInt(int x)
 {
     return (x < 0) ? -x : x;
 }
 
+// CID-18-14 : Comprueba si dos rectángulos son exactamente iguales.
 static bool RectIguales(const RECT& a, const RECT& b)
 {
     return a.left == b.left &&
@@ -76,6 +85,7 @@ static bool RectIguales(const RECT& a, const RECT& b)
         a.bottom == b.bottom;
 }
 
+// CID-18-15 : Comprueba si dos rectángulos son suficientemente parecidos dentro de una tolerancia dada.
 static bool RectParecidos(const RECT& a, const RECT& b, int tol)
 {
     return
@@ -85,11 +95,13 @@ static bool RectParecidos(const RECT& a, const RECT& b, int tol)
         AbsInt(a.bottom - b.bottom) <= tol;
 }
 
+// CID-18-16 : Comprueba si un rectángulo tiene dimensiones positivas utilizables.
 static bool RectValido(const RECT& rc)
 {
     return (rc.right > rc.left) && (rc.bottom > rc.top);
 }
 
+// CID-18-17 : Normaliza el rectángulo de caret para asegurar ancho y alto mínimos visibles.
 static void NormalizarRectCaret(RECT& rc)
 {
     if (rc.right <= rc.left)
@@ -102,6 +114,7 @@ static void NormalizarRectCaret(RECT& rc)
         rc.bottom = rc.top + 18;
 }
 
+// CID-18-18 : Devuelve el nombre de clase Win32 asociado a una ventana dada.
 static std::wstring ObtenerClase(HWND hwnd)
 {
     wchar_t clase[256] = {};
@@ -110,17 +123,20 @@ static std::wstring ObtenerClase(HWND hwnd)
     return std::wstring(clase);
 }
 
+// CID-18-19 : Comprueba si una cadena contiene otra subcadena.
 static bool Contiene(const std::wstring& s, const std::wstring& trozo)
 {
     return s.find(trozo) != std::wstring::npos;
 }
 
+// CID-18-20 : Comprueba si una ventana pertenece exactamente a una clase Win32 dada.
 static bool EsClase(HWND hwnd, const wchar_t* nombre)
 {
     std::wstring clase = ObtenerClase(hwnd);
     return _wcsicmp(clase.c_str(), nombre) == 0;
 }
 
+// CID-18-21 : Identifica controles Win32 que son claramente editables sin recurrir a UI Automation.
 static bool EsClaseEditableClara(HWND hwnd)
 {
     if (!hwnd) return false;
@@ -135,6 +151,7 @@ static bool EsClaseEditableClara(HWND hwnd)
         EsClase(hwnd, L"Scintilla");
 }
 
+// CID-18-22 : Identifica clases modernas o wrappers donde suele ser necesario usar UI Automation.
 static bool EsClaseWrapperModerna(const std::wstring& c)
 {
     return
@@ -147,6 +164,7 @@ static bool EsClaseWrapperModerna(const std::wstring& c)
         Contiene(c, L"HwndWrapper[");
 }
 
+// CID-18-23 : Identifica clases Win32 claramente no editables para evitar falsos positivos.
 static bool EsClaseClaramenteNoEditable(HWND hwnd)
 {
     if (!hwnd) return true;
@@ -168,6 +186,7 @@ static bool EsClaseClaramenteNoEditable(HWND hwnd)
         _wcsicmp(c.c_str(), L"Shell_SecondaryTrayWnd") == 0;
 }
 
+// CID-18-24 : En controles Edit puros comprueba además que no estén en modo solo lectura.
 static bool EsEditNoReadonly(HWND hwnd)
 {
     if (!hwnd) return false;
@@ -179,6 +198,7 @@ static bool EsEditNoReadonly(HWND hwnd)
     return (style & ES_READONLY) == 0;
 }
 
+// CID-18-25 : Obtiene el rectángulo en pantalla de una ventana válida.
 static bool ObtenerRectPantalla(HWND hwnd, RECT& out)
 {
     if (!hwnd || !IsWindow(hwnd))
@@ -195,6 +215,7 @@ static bool ObtenerRectPantalla(HWND hwnd, RECT& out)
     return true;
 }
 
+// CID-18-26 : Obtiene y normaliza el rectángulo real del caret en coordenadas de pantalla.
 static bool ObtenerRectCaretEnPantalla(const GUITHREADINFO& gti, RECT& out)
 {
     if (!gti.hwndCaret || !IsWindow(gti.hwndCaret))
@@ -212,6 +233,7 @@ static bool ObtenerRectCaretEnPantalla(const GUITHREADINFO& gti, RECT& out)
     return true;
 }
 
+// CID-18-27 : Intenta obtener el foco real del hilo foreground mediante AttachThreadInput.
 static HWND ObtenerFocusAlternativo(HWND hwndForeground)
 {
     if (!hwndForeground)
@@ -234,6 +256,7 @@ static HWND ObtenerFocusAlternativo(HWND hwndForeground)
     return out;
 }
 
+// CID-18-28 : Comprueba si un rectángulo UIA es sospechosamente grande respecto a la ventana foreground.
 static bool RectGiganteRespectoAVentana(const RECT& rc, HWND hwndForeground)
 {
     RECT rcWin{};
@@ -255,6 +278,7 @@ static bool RectGiganteRespectoAVentana(const RECT& rc, HWND hwndForeground)
     return ratio > 0.65;
 }
 
+// CID-18-29 : Identifica HRESULTs de desconexión o elementos UIA no disponibles.
 static bool EsHRESULTDesconexion(HRESULT hr)
 {
     return
@@ -264,6 +288,7 @@ static bool EsHRESULTDesconexion(HRESULT hr)
         hr == UIA_E_ELEMENTNOTAVAILABLE;
 }
 
+// CID-18-30 : Decide si conviene activar el fallback de UI Automation según clases modernas detectadas.
 static bool NecesitaUIAFallback(HWND hwndFocus, HWND hwndForeground)
 {
     std::wstring claseFocus = ObtenerClase(hwndFocus);
@@ -278,6 +303,7 @@ static bool NecesitaUIAFallback(HWND hwndFocus, HWND hwndForeground)
     return false;
 }
 
+// CID-18-31 : Intenta localizar un elemento enfocado editable mediante UI Automation y obtener su rectángulo.
 static bool UiAutomation_IntentarRectElementoEnfocado(HWND hwndForeground, RECT& outRect, std::wstring& outInfo)
 {
     outInfo.clear();
@@ -390,6 +416,7 @@ static bool UiAutomation_IntentarRectElementoEnfocado(HWND hwndForeground, RECT&
     return ok;
 }
 
+// CID-18-32 : Resuelve el mejor contexto de texto editable disponible usando caret, Win32 claro o UIA.
 static ContextoTextoDetectado ResolverContextoTexto()
 {
     ContextoTextoDetectado ctx{};
@@ -417,7 +444,7 @@ static ContextoTextoDetectado ResolverContextoTexto()
     ctx.hwnd_focus = hwndFocus;
     ctx.clase_focus = ObtenerClase(hwndFocus);
 
-    // 1) Caso bueno: caret real
+    // CID-18-33 : Caso preferente basado en caret Win32 real.
     RECT rcCaret{};
     if (ObtenerRectCaretEnPantalla(gti, rcCaret))
     {
@@ -427,7 +454,7 @@ static ContextoTextoDetectado ResolverContextoTexto()
         return ctx;
     }
 
-    // 2) Controles editables Win32 claros
+    // CID-18-34 : Fallback sobre controles editables Win32 claramente reconocibles.
     if (hwndFocus &&
         EsClaseEditableClara(hwndFocus) &&
         EsEditNoReadonly(hwndFocus) &&
@@ -443,7 +470,7 @@ static ContextoTextoDetectado ResolverContextoTexto()
         }
     }
 
-    // 3) UIA estricta y solo en wrappers modernos
+    // CID-18-35 : Fallback estricto por UI Automation solo para wrappers modernos compatibles.
     if (hwndFocus &&
         !EsClaseClaramenteNoEditable(hwndFocus) &&
         NecesitaUIAFallback(hwndFocus, hwndForeground))
@@ -462,6 +489,7 @@ static ContextoTextoDetectado ResolverContextoTexto()
     return ctx;
 }
 
+// CID-18-36 : Aplica el contexto detectado si cambia, con debounce de aparición y control de foco activo.
 static void AplicarContextoSiCambia_NoLock(const ContextoTextoDetectado& ctx)
 {
     if (ctx.clase_focus != g_ultima_clase_log)
@@ -475,6 +503,7 @@ static void AplicarContextoSiCambia_NoLock(const ContextoTextoDetectado& ctx)
         (g_ultimo_input_escribible_tick != 0) &&
         ((ahora - g_ultimo_input_escribible_tick) <= VENTANA_ACTIVACION_MS);
 
+    // CID-18-37 : Oculta el panel y limpia candidato si ya no hay contexto editable visible.
     if (!ctx.visible)
     {
         g_tenemos_candidato = false;
@@ -492,7 +521,7 @@ static void AplicarContextoSiCambia_NoLock(const ContextoTextoDetectado& ctx)
         return;
     }
 
-    // Si todavía no está visible, no debe aparecer solo por foco/cursor.
+    // CID-18-38 : Mientras el panel aún no está visible exige actividad escribible reciente para mostrarlo.
     if (!g_ultimo_visible && !actividadReciente)
     {
         g_tenemos_candidato = false;
@@ -500,6 +529,7 @@ static void AplicarContextoSiCambia_NoLock(const ContextoTextoDetectado& ctx)
         return;
     }
 
+    // CID-18-39 : Gestiona el debounce inicial antes de hacer visible el panel por primera vez.
     if (!g_ultimo_visible)
     {
         bool mismoCandidato =
@@ -541,6 +571,7 @@ static void AplicarContextoSiCambia_NoLock(const ContextoTextoDetectado& ctx)
         return;
     }
 
+    // CID-18-40 : Si cambia la ventana o el foco real, esconde el panel y reinicia el ciclo de candidato.
     bool cambiaDeFoco =
         ctx.hwnd_foreground != g_ultimo_hwnd_foreground ||
         ctx.hwnd_focus != g_ultimo_hwnd_focus;
@@ -553,6 +584,7 @@ static void AplicarContextoSiCambia_NoLock(const ContextoTextoDetectado& ctx)
         return;
     }
 
+    // CID-18-41 : Si cambia de forma apreciable el rectángulo de anclaje, reposiciona la superposición.
     if (!RectParecidos(ctx.rc_anclaje, g_ultimo_rect, 12))
     {
         g_ultimo_rect = ctx.rc_anclaje;
@@ -573,12 +605,14 @@ static void AplicarContextoSiCambia_NoLock(const ContextoTextoDetectado& ctx)
     }
 }
 
+// CID-18-42 : Resuelve el contexto actual y aplica los cambios necesarios sobre el panel.
 static void ActualizarContexto_NoLock()
 {
     ContextoTextoDetectado ctx = ResolverContextoTexto();
     AplicarContextoSiCambia_NoLock(ctx);
 }
 
+// CID-18-43 : Callback periódico del temporizador que refresca el contexto editable actual.
 static void CALLBACK TimerCallback(PVOID, BOOLEAN)
 {
     if (!g_cs_iniciado)
@@ -589,9 +623,7 @@ static void CALLBACK TimerCallback(PVOID, BOOLEAN)
     LeaveCriticalSection(&g_cs);
 }
 
-// ------------------------------------------------------------
-// API pública
-// ------------------------------------------------------------
+// CID-18-44 : Inicializa el panel de contexto, su temporizador y su estado base de detección.
 bool IniciarPanelContextoTexto()
 {
     if (!g_cs_iniciado)
@@ -642,6 +674,7 @@ bool IniciarPanelContextoTexto()
     return ok;
 }
 
+// CID-18-45 : Detiene el panel de contexto liberando temporizador, estado interno y visibilidad.
 void DetenerPanelContextoTexto()
 {
     if (g_timer && g_timerQueue)
@@ -681,6 +714,7 @@ void DetenerPanelContextoTexto()
     Superposicion_SetVisible(false);
 }
 
+// CID-18-46 : Fuerza una actualización inmediata del contexto sin esperar al siguiente tick periódico.
 void ActualizarPanelContextoTextoAhora()
 {
     if (!g_cs_iniciado || !g_iniciado)
@@ -691,6 +725,7 @@ void ActualizarPanelContextoTextoAhora()
     LeaveCriticalSection(&g_cs);
 }
 
+// CID-18-47 : Registra actividad escribible reciente para permitir la aparición del panel contextual.
 void NotificarActividadEscribiblePanelContextoTexto()
 {
     if (!g_cs_iniciado || !g_iniciado)

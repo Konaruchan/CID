@@ -1,30 +1,17 @@
+// CID-25-01 : Previene inclusiones múltiples de la interfaz pública del mapa lógico de teclas CID.
 #pragma once
+
+// CID-25-02 : Incluye los tipos base de Windows usados por la compatibilidad heredada por virtual key.
 #include <windows.h>
 
-// ---------------------------------
-// Identidad lógica CID (por nombre)
-// ---------------------------------
-
-// Devuelve true si el nombre CID es válido.
-// Ejemplos válidos: I1..I10, C1..C6, D1..D10, CID_KEY, AUX_CID
+// CID-25-03 : Declara la validación y propiedades lógicas de teclas CID identificadas por nombre.
 bool EsNombreTeclaCIDValido(const wchar_t* nombreCid);
-
-// Orden fijo para imprimir acordes consistentes.
-// Primero I..., luego C..., luego D...
-// CID_KEY y AUX_CID quedan fuera del acorde normal.
 int OrdenTeclaCID_PorNombre(const wchar_t* nombreCid);
+bool EsMarcadoraTilde_PorNombre(const wchar_t* nombreCid);
+bool EsPedalPrincipal_PorNombre(const wchar_t* nombreCid);
+bool EsPedalAuxiliar_PorNombre(const wchar_t* nombreCid);
 
-// Helpers lógicos
-bool EsMarcadoraTilde_PorNombre(const wchar_t* nombreCid); // D10 sola
-bool EsPedalPrincipal_PorNombre(const wchar_t* nombreCid); // CID_KEY
-bool EsPedalAuxiliar_PorNombre(const wchar_t* nombreCid);  // AUX_CID
-
-// ---------------------------------
-// Compatibilidad temporal antigua
-// ---------------------------------
-// Estas funciones antiguas pueden mantenerse mientras migramos,
-// pero ya no deben ser la base del sistema.
-
+// CID-25-04 : Declara la capa temporal de compatibilidad del sistema antiguo basado en virtual keys.
 const wchar_t* NombreTeclaCID(DWORD vk);
 int OrdenTeclaCID(DWORD vk);
 bool EsTeclaCID(DWORD vk);

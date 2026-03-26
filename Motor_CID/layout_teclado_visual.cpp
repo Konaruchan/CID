@@ -1,5 +1,7 @@
+// CID-22-01 : Inclusión de la implementación del layout visual del teclado CID.
 #include "layout_teclado_visual.h"
 
+// CID-22-02 : Inclusión de cabeceras del sistema y utilidades estándar para parsing y contenedores.
 #include <windows.h>
 #include <string>
 #include <vector>
@@ -9,12 +11,10 @@
 #include <cwctype>
 #include <algorithm>
 
+// CID-22-03 : Espacio interno anónimo para encapsular el parser JSON mínimo y helpers privados del layout.
 namespace
 {
-    // ------------------------------------------------------------
-    // JSON mínimo
-    // ------------------------------------------------------------
-
+    // CID-22-04 : Representa un valor JSON mínimo con soporte para null, bool, número, string, array y objeto.
     struct JsonValue
     {
         enum Type
@@ -34,24 +34,28 @@ namespace
         std::map<std::wstring, JsonValue> o;
     };
 
+    // CID-22-05 : Parser JSON mínimo usado para leer el archivo KLE del teclado visual.
     struct JsonParser
     {
         const std::wstring* text = nullptr;
         size_t pos = 0;
         std::wstring error;
 
+        // CID-22-06 : Devuelve el carácter actual sin avanzar la posición del parser.
         wchar_t Peek() const
         {
             if (!text || pos >= text->size()) return 0;
             return (*text)[pos];
         }
 
+        // CID-22-07 : Devuelve el carácter actual y avanza la posición del parser.
         wchar_t Get()
         {
             if (!text || pos >= text->size()) return 0;
             return (*text)[pos++];
         }
 
+        // CID-22-08 : Salta espacios en blanco JSON entre tokens.
         void SkipWS()
         {
             while (true)
@@ -65,6 +69,7 @@ namespace
             }
         }
 
+        // CID-22-09 : Intenta consumir un literal JSON exacto desde la posición actual.
         bool MatchLiteral(const wchar_t* lit)
         {
             size_t i = 0;
@@ -77,6 +82,7 @@ namespace
             return true;
         }
 
+        // CID-22-10 : Parsea una cadena JSON con escapes básicos y unicode simple.
         bool ParseString(std::wstring& out)
         {
             out.clear();
@@ -154,6 +160,7 @@ namespace
             }
         }
 
+        // CID-22-11 : Parsea un número JSON simple con soporte para signo, decimales y exponente.
         bool ParseNumber(double& out)
         {
             size_t start = pos;
@@ -199,6 +206,7 @@ namespace
             return true;
         }
 
+        // CID-22-12 : Parsea cualquier valor JSON delegando al subtipo correspondiente.
         bool ParseValue(JsonValue& out)
         {
             SkipWS();
@@ -267,6 +275,7 @@ namespace
             return false;
         }
 
+        // CID-22-13 : Parsea un array JSON y acumula sus elementos en orden.
         bool ParseArray(JsonValue& out)
         {
             if (Get() != L'[')
@@ -306,6 +315,7 @@ namespace
             }
         }
 
+        // CID-22-14 : Parsea un objeto JSON y almacena sus pares clave-valor.
         bool ParseObject(JsonValue& out)
         {
             if (Get() != L'{')
@@ -359,11 +369,13 @@ namespace
         }
     };
 
+    // CID-22-15 : Envía mensajes de depuración del módulo de layout visual al visor de salida.
     static void Log(const std::wstring& s)
     {
         OutputDebugStringW((s + L"\n").c_str());
     }
 
+    // CID-22-16 : Convierte una cadena UTF-8 a Unicode para cargar archivos JSON.
     static std::wstring NarrowToWideUtf8(const std::string& s)
     {
         if (s.empty()) return L"";
@@ -377,6 +389,7 @@ namespace
         return out;
     }
 
+    // CID-22-17 : Lee un archivo de texto UTF-8 y elimina BOM si existe.
     static bool LeerArchivoTextoUtf8(const std::wstring& ruta, std::wstring& outTexto, std::wstring* error)
     {
         std::ifstream f(ruta.c_str(), std::ios::binary);
@@ -401,6 +414,7 @@ namespace
         return true;
     }
 
+    // CID-22-18 : Obtiene un número desde una clave de un objeto JSON.
     static bool JsonGetNumber(const JsonValue& obj, const wchar_t* key, double& out)
     {
         if (obj.type != JsonValue::TObject) return false;
@@ -411,6 +425,7 @@ namespace
         return true;
     }
 
+    // CID-22-19 : Obtiene una cadena desde una clave de un objeto JSON.
     static bool JsonGetString(const JsonValue& obj, const wchar_t* key, std::wstring& out)
     {
         if (obj.type != JsonValue::TObject) return false;
@@ -421,6 +436,7 @@ namespace
         return true;
     }
 
+    // CID-22-20 : Convierte un color hexadecimal tipo #RRGGBB a COLORREF.
     static COLORREF ParseHexColor(const std::wstring& s, bool& ok)
     {
         ok = false;
@@ -444,6 +460,7 @@ namespace
         return RGB(r, g, b);
     }
 
+    // CID-22-21 : Determina si un color es aproximadamente gris para depuración y filtrado visual.
     static bool EsColorGrisAprox(COLORREF c)
     {
         int r = (int)GetRValue(c);
@@ -454,13 +471,13 @@ namespace
         int minv = min(r, min(g, b));
         int delta = maxv - minv;
 
-        // Poco saturado y medio apagado
         if (delta <= 18 && r >= 90 && r <= 210 && g >= 90 && g <= 210 && b >= 90 && b <= 210)
             return true;
 
         return false;
     }
 
+    // CID-22-22 : Recorta espacios en blanco al inicio y final de una cadena ancha.
     static std::wstring Trim(const std::wstring& s)
     {
         size_t a = 0;
@@ -472,6 +489,7 @@ namespace
         return s.substr(a, b - a);
     }
 
+    // CID-22-23 : Divide un texto multilinea en líneas individuales.
     static std::vector<std::wstring> SplitLines(const std::wstring& s)
     {
         std::vector<std::wstring> out;
@@ -495,6 +513,7 @@ namespace
         return out;
     }
 
+    // CID-22-24 : Comprueba si una cadena parece un identificador CID válido.
     static bool EsIdCidValido(const std::wstring& s)
     {
         if (s == L"AUX_CID") return true;
@@ -504,6 +523,7 @@ namespace
         return false;
     }
 
+    // CID-22-25 : Convierte un texto a mayúsculas para detección robusta de IDs CID.
     static std::wstring NormalizarTextoMayus(const std::wstring& s)
     {
         std::wstring out = s;
@@ -512,6 +532,7 @@ namespace
         return out;
     }
 
+    // CID-22-26 : Intenta detectar el id CID de una tecla a partir de su texto original multilínea.
     static std::wstring DetectarIdCidDesdeTexto(const std::wstring& raw)
     {
         std::vector<std::wstring> lines = SplitLines(raw);
@@ -534,6 +555,7 @@ namespace
         return L"";
     }
 
+    // CID-22-27 : Escoge el texto visible principal de una tecla a partir del raw o su id CID detectado.
     static std::wstring EscogerTextoVisible(const std::wstring& raw, const std::wstring& idCid)
     {
         if (!idCid.empty())
@@ -555,22 +577,21 @@ namespace
         return L"";
     }
 
+    // CID-22-28 : Decide si una tecla debe formar parte del layout renderizable final.
     static bool DebeRenderizarTecla(const TeclaVisualCID& t)
     {
-        // Nunca renderizar vacío total
         if (Trim(t.textoOriginal).empty() && Trim(t.textoVisible).empty() && t.idCid.empty())
             return false;
 
-        // Si tiene ID CID o texto útil, sí
         if (!t.idCid.empty()) return true;
         if (!Trim(t.textoVisible).empty()) return true;
 
-        // Gris + sin nada útil = fuera
         if (t.esGris) return false;
 
         return false;
     }
 
+    // CID-22-29 : Parsea el JSON KLE y construye el layout visual renderizable del teclado.
     static bool ParsearLayoutKLE(const JsonValue& root, LayoutTecladoVisual& outLayout, std::wstring* error)
     {
         if (root.type != JsonValue::TArray)
@@ -585,6 +606,7 @@ namespace
 
         double y = 0.0;
 
+        // CID-22-30 : Recorre cada fila KLE acumulando geometría y estado heredable de teclas.
         for (size_t rowIdx = 0; rowIdx < root.a.size(); ++rowIdx)
         {
             const JsonValue& row = root.a[rowIdx];
@@ -593,13 +615,13 @@ namespace
 
             double x = 0.0;
 
-            // estado KLE heredable dentro de fila
             double nextW = 1.0;
             double nextH = 1.0;
             double pendingX = 0.0;
             double pendingY = 0.0;
             std::wstring colorHex = L"#cccccc";
 
+            // CID-22-31 : Recorre objetos de estado y strings de teclas dentro de una fila KLE.
             for (size_t i = 0; i < row.a.size(); ++i)
             {
                 const JsonValue& item = row.a[i];
@@ -618,6 +640,7 @@ namespace
                     continue;
                 }
 
+                // CID-22-32 : Convierte una entrada string KLE en una tecla visual concreta y renderizable.
                 if (item.type == JsonValue::TString)
                 {
                     x += pendingX;
@@ -649,7 +672,6 @@ namespace
 
                     x += nextW;
 
-                    // reset KLE por tecla
                     nextW = 1.0;
                     nextH = 1.0;
                     continue;
@@ -660,6 +682,7 @@ namespace
             outLayout.altoTotal = max(outLayout.altoTotal, y);
         }
 
+        // CID-22-33 : Falla si el layout no produce ninguna tecla utilizable para render.
         if (outLayout.teclas.empty())
         {
             if (error) *error = L"No se encontraron teclas renderizables en keyboard-layout.json.";
@@ -670,6 +693,7 @@ namespace
     }
 }
 
+// CID-22-34 : Carga el archivo JSON del layout visual, lo parsea y construye el teclado renderizable.
 bool CargarLayoutTecladoVisual(const std::wstring& rutaJson, LayoutTecladoVisual& outLayout, std::wstring* error)
 {
     LimpiarLayoutTecladoVisual(outLayout);
@@ -696,6 +720,7 @@ bool CargarLayoutTecladoVisual(const std::wstring& rutaJson, LayoutTecladoVisual
     return true;
 }
 
+// CID-22-35 : Limpia completamente el layout visual y reinicia sus métricas totales.
 void LimpiarLayoutTecladoVisual(LayoutTecladoVisual& layout)
 {
     layout.teclas.clear();
@@ -703,6 +728,7 @@ void LimpiarLayoutTecladoVisual(LayoutTecladoVisual& layout)
     layout.altoTotal = 0.0;
 }
 
+// CID-22-36 : Convierte una tecla visual abstracta a su rectángulo en píxeles dentro de un lienzo dado.
 RECT RectTeclaVisualAPixeles(
     const TeclaVisualCID& t,
     int origenX, int origenY,
@@ -716,6 +742,7 @@ RECT RectTeclaVisualAPixeles(
     return r;
 }
 
+// CID-22-37 : Busca la tecla visual situada bajo un punto de pantalla ya transformado al canvas del layout.
 int BuscarTeclaVisualEnPunto(
     const LayoutTecladoVisual& layout,
     int px, int py,
@@ -735,6 +762,7 @@ int BuscarTeclaVisualEnPunto(
     return -1;
 }
 
+// CID-22-38 : Busca una tecla visual por su identificador CID dentro del layout cargado.
 int BuscarTeclaVisualPorIdCid(const LayoutTecladoVisual& layout, const std::wstring& idCid)
 {
     for (size_t i = 0; i < layout.teclas.size(); ++i)

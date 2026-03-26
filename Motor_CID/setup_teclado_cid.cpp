@@ -1,9 +1,12 @@
-﻿#include "setup_teclado_cid.h"
+﻿// CID-16-01 : Inclusión de la implementación del asistente de configuración del teclado CID.
+#include "setup_teclado_cid.h"
 
+// CID-16-02 : Inclusión de módulos de calibración, mapa CID y layout visual del teclado.
 #include "calibracion_teclado.h"
 #include "mapa_teclas_cid.h"
 #include "layout_teclado_visual.h"
 
+// CID-16-03 : Inclusión de cabeceras del sistema, utilidades de interfaz y contenedores estándar.
 #include <windowsx.h>
 #include <windows.h>
 #include <string>
@@ -12,10 +15,13 @@
 #include <algorithm>
 #include <cwctype>
 
+// CID-16-04 : Espacio interno anónimo para encapsular estado y helpers privados del asistente de setup.
 namespace
 {
+    // CID-16-05 : Nombre de la clase de ventana registrada por el asistente de configuración.
     static const wchar_t* kClaseVentanaSetup = L"CID_Setup_Teclado_V6";
 
+    // CID-16-06 : Paleta base de colores usada por el asistente visual de configuración.
     static const COLORREF COLOR_BG = RGB(248, 248, 245);
     static const COLORREF COLOR_TEXT = RGB(28, 28, 28);
     static const COLORREF COLOR_TEXT_SOFT = RGB(90, 90, 90);
@@ -25,6 +31,7 @@ namespace
     static const COLORREF COLOR_CARD_BORDER = RGB(225, 225, 220);
     static const COLORREF COLOR_SHADOW = RGB(220, 220, 215);
 
+    // CID-16-07 : Estado global del asistente con ventana, layout, pasos, captura y UI interactiva.
     struct SetupState
     {
         HINSTANCE hInstance = nullptr;
@@ -57,13 +64,16 @@ namespace
         bool trackingMouseLeave = false;
     };
 
+    // CID-16-08 : Instancia global única del estado del asistente de setup.
     SetupState g_setup;
 
+    // CID-16-09 : Envía mensajes de depuración del asistente al visor de salida de Windows.
     void Log(const std::wstring& s)
     {
         OutputDebugStringW((s + L"\n").c_str());
     }
 
+    // CID-16-10 : Obtiene el directorio del ejecutable actual para resolver rutas auxiliares del setup.
     std::wstring DirectorioExe()
     {
         wchar_t exePath[MAX_PATH]{};
@@ -75,6 +85,7 @@ namespace
         return p;
     }
 
+    // CID-16-11 : Une dos segmentos de ruta garantizando un separador válido entre ambos.
     std::wstring Unir(const std::wstring& a, const std::wstring& b)
     {
         if (a.empty()) return b;
@@ -82,6 +93,7 @@ namespace
         return a + L"\\" + b;
     }
 
+    // CID-16-12 : Recorta espacios en blanco al inicio y final de una cadena ancha.
     std::wstring Trim(const std::wstring& s)
     {
         size_t a = 0;
@@ -93,6 +105,7 @@ namespace
         return s.substr(a, b - a);
     }
 
+    // CID-16-13 : Convierte una cadena completa a mayúsculas de forma simple para comparaciones visuales.
     std::wstring ToUpperSimple(const std::wstring& s)
     {
         std::wstring out = s;
@@ -101,6 +114,7 @@ namespace
         return out;
     }
 
+    // CID-16-14 : Divide un texto multilinea en líneas individuales separadas por salto de línea.
     std::vector<std::wstring> SplitLines(const std::wstring& s)
     {
         std::vector<std::wstring> out;
@@ -124,6 +138,7 @@ namespace
         return out;
     }
 
+    // CID-16-15 : Extrae la pista secundaria visible de una tecla a partir de su texto original de layout.
     std::wstring HintTeclaDesdeTextoOriginal(const TeclaVisualCID& t)
     {
         std::vector<std::wstring> lines = SplitLines(t.textoOriginal);
@@ -156,6 +171,7 @@ namespace
         return L"";
     }
 
+    // CID-16-16 : Obtiene el texto principal mostrado dentro de una tecla visual del asistente.
     std::wstring PrincipalTecla(const TeclaVisualCID& t)
     {
         if (!t.idCid.empty())
@@ -168,6 +184,7 @@ namespace
         return t.textoVisible;
     }
 
+    // CID-16-17 : Devuelve el nombre CID del paso actual de calibración si todavía existe.
     std::wstring NombrePasoActual()
     {
         if (g_setup.indiceActual >= g_setup.pasos.size())
@@ -175,6 +192,7 @@ namespace
         return g_setup.pasos[g_setup.indiceActual];
     }
 
+    // CID-16-18 : Comprueba si un scanCode figura actualmente como pulsado dentro del asistente.
     bool EstaScanCodeAbajo(DWORD sc)
     {
         for (size_t i = 0; i < g_setup.scanCodesAbajo.size(); ++i)
@@ -185,6 +203,7 @@ namespace
         return false;
     }
 
+    // CID-16-19 : Marca un scanCode como pulsado dentro del estado visual del asistente.
     void MarcarScanCodeAbajo(DWORD sc)
     {
         if (sc == 0 || sc >= 256) return;
@@ -192,6 +211,7 @@ namespace
             g_setup.scanCodesAbajo.push_back(sc);
     }
 
+    // CID-16-20 : Elimina un scanCode del conjunto de teclas actualmente pulsadas.
     void MarcarScanCodeArriba(DWORD sc)
     {
         for (size_t i = 0; i < g_setup.scanCodesAbajo.size(); ++i)
@@ -204,6 +224,7 @@ namespace
         }
     }
 
+    // CID-16-21 : Devuelve el título principal del asistente según su fase actual.
     std::wstring TextoTitulo()
     {
         if (g_setup.modoPruebaFinal)
@@ -212,6 +233,7 @@ namespace
         return L"Vamos a configurar tu teclado CID";
     }
 
+    // CID-16-22 : Devuelve el texto principal explicativo según paso, reasignación o estado final.
     std::wstring TextoPrincipal()
     {
         if (g_setup.modoPruebaFinal)
@@ -241,6 +263,7 @@ namespace
         return L"Pulsa la tecla que usarás como " + nombre;
     }
 
+    // CID-16-23 : Devuelve el texto secundario de ayuda y controles rápidos del asistente.
     std::wstring TextoSecundario()
     {
         if (g_setup.modoPruebaFinal)
@@ -262,6 +285,7 @@ namespace
         return s;
     }
 
+    // CID-16-24 : Devuelve el texto inferior de estado o error mostrado en la franja final de la ventana.
     std::wstring TextoEstadoInferior()
     {
         if (!g_setup.errorFinal.empty())
@@ -276,12 +300,14 @@ namespace
         return L"";
     }
 
+    // CID-16-25 : Invalida la ventana del asistente para forzar redibujado.
     void RefrescarVentana()
     {
         if (g_setup.hwnd)
             InvalidateRect(g_setup.hwnd, nullptr, TRUE);
     }
 
+    // CID-16-26 : Comprueba si un scanCode ya estaba asignado a otra tecla CID distinta del objetivo actual.
     bool YaEstaScanCodeUsadoPorOtroPaso(DWORD scanCode, const std::wstring& nombreActual, std::wstring& nombreExistente)
     {
         std::vector<std::pair<std::wstring, DWORD> > asignaciones = ObtenerAsignacionesCalibradas();
@@ -299,6 +325,7 @@ namespace
         return false;
     }
 
+    // CID-16-27 : Retrocede un paso o cancela una reasignación según el contexto actual del asistente.
     void RetrocederPaso()
     {
         if (g_setup.modoPruebaFinal)
@@ -345,6 +372,7 @@ namespace
         RefrescarVentana();
     }
 
+    // CID-16-28 : Guarda en disco la calibración actual y actualiza el estado final del asistente.
     bool GuardarCalibracionActual()
     {
         std::wstring err;
@@ -361,6 +389,7 @@ namespace
         return true;
     }
 
+    // CID-16-29 : Reinicia el asistente por completo borrando calibración, pasos y estado de prueba final.
     void ReiniciarCalibracionDesdeCero()
     {
         LimpiarCalibracionTeclado();
@@ -381,6 +410,7 @@ namespace
         RefrescarVentana();
     }
 
+    // CID-16-30 : Entra en la fase final de prueba del teclado tras guardar correctamente la calibración.
     void EntrarModoPruebaFinal()
     {
         g_setup.modoPruebaFinal = true;
@@ -390,12 +420,14 @@ namespace
         RefrescarVentana();
     }
 
+    // CID-16-31 : Cierra el flujo de pasos pendientes guardando la calibración y entrando en modo prueba.
     void FinalizarYGuardar()
     {
         if (GuardarCalibracionActual())
             EntrarModoPruebaFinal();
     }
 
+    // CID-16-32 : Avanza automáticamente mientras los pasos secuenciales ya estén cubiertos por asignaciones válidas.
     void AvanzarSiPasoActualCompleto()
     {
         while (g_setup.indiceActual < g_setup.pasos.size())
@@ -410,6 +442,7 @@ namespace
             FinalizarYGuardar();
     }
 
+    // CID-16-33 : Acepta un scanCode para una tecla objetivo concreta y actualiza progreso o reasignación.
     void AceptarScanCodeParaId(const std::wstring& nombreObjetivo, DWORD scanCode, bool avanzarEnSecuencia)
     {
         if (!g_setup.modoPruebaFinal && g_setup.terminado)
@@ -457,6 +490,7 @@ namespace
         RefrescarVentana();
     }
 
+    // CID-16-34 : Acepta un scanCode detectado y lo enruta según paso normal, prueba final o reasignación manual.
     void AceptarScanCode(DWORD scanCode)
     {
         if (!g_setup.modoPruebaFinal && g_setup.terminado)
@@ -483,6 +517,7 @@ namespace
         AceptarScanCodeParaId(nombrePaso, scanCode, true);
     }
 
+    // CID-16-35 : Calcula el rectángulo de la tarjeta de cabecera del asistente.
     RECT CalcularAreaCabecera(const RECT& rcCliente)
     {
         RECT r = rcCliente;
@@ -493,6 +528,7 @@ namespace
         return r;
     }
 
+    // CID-16-36 : Calcula el área disponible para dibujar el teclado visual dentro del asistente.
     RECT CalcularAreaTeclado(const RECT& rcCliente)
     {
         RECT r = rcCliente;
@@ -503,6 +539,7 @@ namespace
         return r;
     }
 
+    // CID-16-37 : Calcula la franja inferior donde se dibuja el estado textual del asistente.
     RECT CalcularAreaEstadoInferior(const RECT& rcCliente)
     {
         RECT r = rcCliente;
@@ -513,6 +550,7 @@ namespace
         return r;
     }
 
+    // CID-16-38 : Calcula el rectángulo del botón de reinicio disponible en modo prueba final.
     RECT CalcularRectBotonReiniciar(const RECT& rcCliente)
     {
         RECT r{};
@@ -523,11 +561,13 @@ namespace
         return r;
     }
 
+    // CID-16-39 : Comprueba si un punto de ratón cae dentro de un rectángulo dado.
     bool PuntoEnRect(int x, int y, const RECT& r)
     {
         return x >= r.left && x < r.right && y >= r.top && y < r.bottom;
     }
 
+    // CID-16-40 : Calcula la métrica real del teclado dibujado según el layout y el área disponible.
     void CalcularMetricaTeclado(const RECT& rcArea, int& origenX, int& origenY, int& unidadW, int& unidadH)
     {
         origenX = rcArea.left;
@@ -557,6 +597,7 @@ namespace
         }
     }
 
+    // CID-16-41 : Aclara un color base sumando luminosidad a sus tres canales.
     COLORREF AclararColor(COLORREF c, int extra)
     {
         int r = min(255, (int)GetRValue(c) + extra);
@@ -565,6 +606,7 @@ namespace
         return RGB(r, g, b);
     }
 
+    // CID-16-42 : Oscurece un color base restando intensidad a sus tres canales.
     COLORREF OscurecerColor(COLORREF c, int delta)
     {
         int r = max(0, (int)GetRValue(c) - delta);
@@ -573,6 +615,7 @@ namespace
         return RGB(r, g, b);
     }
 
+    // CID-16-43 : Rellena un rectángulo redondeado con un color sólido.
     void RellenarRoundRect(HDC hdc, const RECT& r, COLORREF color, int radio)
     {
         HBRUSH b = CreateSolidBrush(color);
@@ -584,6 +627,7 @@ namespace
         DeleteObject(b);
     }
 
+    // CID-16-44 : Dibuja el borde de un rectángulo redondeado con grosor y color configurables.
     void BordeRoundRect(HDC hdc, const RECT& r, COLORREF color, int grosor, int radio)
     {
         HPEN pen = CreatePen(PS_SOLID, grosor, color);
@@ -595,6 +639,7 @@ namespace
         DeleteObject(pen);
     }
 
+    // CID-16-45 : Dibuja la tarjeta visual de cabecera con sombra, fondo y borde suave.
     void PintarTarjetaCabecera(HDC hdc, const RECT& r)
     {
         RECT sombra = r;
@@ -604,6 +649,7 @@ namespace
         BordeRoundRect(hdc, r, COLOR_CARD_BORDER, 1, 18);
     }
 
+    // CID-16-46 : Dibuja título, texto principal y texto secundario de la cabecera del asistente.
     void PintarTextoCabecera(HDC hdc, const RECT& rcCliente)
     {
         RECT card = CalcularAreaCabecera(rcCliente);
@@ -666,6 +712,7 @@ namespace
         DeleteObject(hFontBody);
     }
 
+    // CID-16-47 : Dibuja una tecla individual del teclado visual con estados de objetivo, asignación y pulsación.
     void PintarTecla(HDC hdc, const TeclaVisualCID& t, const RECT& r)
     {
         std::wstring pasoActual = NombrePasoActual();
@@ -742,6 +789,7 @@ namespace
 
         HFONT oldFont = (HFONT)SelectObject(hdc, hFontHint);
 
+        // CID-16-48 : Dibuja la pista pequeña superior de la tecla cuando existe texto auxiliar útil.
         if (!hint.empty())
         {
             RECT rHint = rTop;
@@ -754,6 +802,7 @@ namespace
             DrawTextW(hdc, hint.c_str(), -1, &rHint, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
         }
 
+        // CID-16-49 : Dibuja la etiqueta principal grande de la tecla en el centro visual.
         RECT rMain = rTop;
         rMain.left += 5;
         rMain.top += 10;
@@ -769,6 +818,7 @@ namespace
         DeleteObject(hFontMain);
     }
 
+    // CID-16-50 : Dibuja el teclado completo a partir del layout visual cargado.
     void PintarTeclado(HDC hdc, const RECT& rcCliente)
     {
         if (!g_setup.layoutCargado)
@@ -790,6 +840,7 @@ namespace
         }
     }
 
+    // CID-16-51 : Dibuja la línea de estado inferior con color normal o de error según el contexto.
     void PintarEstadoInferior(HDC hdc, const RECT& rcCliente)
     {
         std::wstring estado = TextoEstadoInferior();
@@ -812,6 +863,7 @@ namespace
         DeleteObject(hFont);
     }
 
+    // CID-16-52 : Dibuja el botón de reinicio solo durante el modo final de prueba y corrección.
     void PintarBotonReiniciar(HDC hdc, const RECT& rcCliente)
     {
         if (!g_setup.modoPruebaFinal)
@@ -846,6 +898,7 @@ namespace
         DeleteObject(hFont);
     }
 
+    // CID-16-53 : Activa el modo de reasignación manual al hacer clic sobre una tecla visual válida.
     void ActivarModoReasignacionPorClick(int mouseX, int mouseY, const RECT& rcCliente)
     {
         if ((!g_setup.modoPruebaFinal && g_setup.terminado) || !g_setup.layoutCargado)
@@ -869,6 +922,7 @@ namespace
         RefrescarVentana();
     }
 
+    // CID-16-54 : Inicia el seguimiento de salida del ratón para gestionar el hover del botón inferior.
     void IniciarTrackMouseLeave(HWND hwnd)
     {
         if (g_setup.trackingMouseLeave)
@@ -883,6 +937,7 @@ namespace
             g_setup.trackingMouseLeave = true;
     }
 
+    // CID-16-55 : Procedimiento de ventana del asistente que gestiona ratón, teclado, pintura y cierre.
     LRESULT CALLBACK SetupWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
         switch (msg)
@@ -890,6 +945,7 @@ namespace
         case WM_CREATE:
             return 0;
 
+            // CID-16-56 : Gestiona hover del botón de reinicio durante el modo de prueba final.
         case WM_MOUSEMOVE:
         {
             IniciarTrackMouseLeave(hwnd);
@@ -913,6 +969,7 @@ namespace
             return 0;
         }
 
+        // CID-16-57 : Limpia el estado hover cuando el ratón abandona la ventana del asistente.
         case WM_MOUSELEAVE:
         {
             g_setup.trackingMouseLeave = false;
@@ -924,6 +981,7 @@ namespace
             return 0;
         }
 
+        // CID-16-58 : Gestiona clics sobre el botón de reinicio o sobre teclas para reasignación manual.
         case WM_LBUTTONDOWN:
         {
             int x = GET_X_LPARAM(lParam);
@@ -946,6 +1004,7 @@ namespace
             return 0;
         }
 
+        // CID-16-59 : Procesa pulsaciones del asistente para captura de scanCodes, navegación y cierre.
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
         {
@@ -958,6 +1017,7 @@ namespace
                 RefrescarVentana();
             }
 
+            // CID-16-60 : En modo prueba final captura teclas para comprobación o cierra con Enter y Esc.
             if (g_setup.modoPruebaFinal)
             {
                 if (wParam == VK_RETURN || wParam == VK_ESCAPE)
@@ -975,6 +1035,7 @@ namespace
                 return 0;
             }
 
+            // CID-16-61 : Si el asistente ya terminó, solo permite cerrar con Enter o Esc.
             if (g_setup.terminado)
             {
                 if (wParam == VK_RETURN || wParam == VK_ESCAPE)
@@ -985,6 +1046,7 @@ namespace
                 return 0;
             }
 
+            // CID-16-62 : Cancela el asistente actual cuando el usuario pulsa Escape durante la calibración.
             if (wParam == VK_ESCAPE)
             {
                 g_setup.cancelado = true;
@@ -994,6 +1056,7 @@ namespace
                 return 0;
             }
 
+            // CID-16-63 : Retrocede un paso cuando el usuario pulsa Retroceso durante la calibración.
             if (wParam == VK_BACK)
             {
                 RetrocederPaso();
@@ -1003,6 +1066,7 @@ namespace
             return 0;
         }
 
+        // CID-16-64 : Actualiza el estado visual de teclas pulsadas al soltarlas.
         case WM_KEYUP:
         case WM_SYSKEYUP:
         {
@@ -1012,10 +1076,12 @@ namespace
             return 0;
         }
 
+        // CID-16-65 : Fuerza redibujado si cambia el layout de entrada del sistema.
         case WM_INPUTLANGCHANGE:
             RefrescarVentana();
             return 0;
 
+            // CID-16-66 : Dibuja el fondo, cabecera, teclado, estado inferior y botón de reinicio.
         case WM_PAINT:
         {
             PAINTSTRUCT ps;
@@ -1039,6 +1105,7 @@ namespace
             return 0;
         }
 
+        // CID-16-67 : Cierra el bucle del asistente al destruir la ventana principal.
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
@@ -1047,6 +1114,7 @@ namespace
         return DefWindowProcW(hwnd, msg, wParam, lParam);
     }
 
+    // CID-16-68 : Registra la clase de ventana del asistente de configuración si todavía no existe.
     bool RegistrarClaseVentana(HINSTANCE hInstance, std::wstring* error)
     {
         WNDCLASSEXW wc{};
@@ -1072,6 +1140,7 @@ namespace
     }
 }
 
+// CID-16-69 : Ejecuta el asistente completo de calibración del teclado CID hasta guardado o cancelación.
 bool EjecutarSetupTecladoCID(HINSTANCE hInstance, const std::wstring& rutaCalibrationJson, std::wstring* error)
 {
     g_setup = SetupState{};
@@ -1081,6 +1150,7 @@ bool EjecutarSetupTecladoCID(HINSTANCE hInstance, const std::wstring& rutaCalibr
 
     LimpiarCalibracionTeclado();
 
+    // CID-16-70 : Construye la secuencia ordenada de pasos de calibración para todas las teclas CID físicas.
     g_setup.pasos.push_back(L"I1");
     g_setup.pasos.push_back(L"I2");
     g_setup.pasos.push_back(L"I3");
@@ -1112,6 +1182,7 @@ bool EjecutarSetupTecladoCID(HINSTANCE hInstance, const std::wstring& rutaCalibr
 
     g_setup.pasos.push_back(L"AUX_CID");
 
+    // CID-16-71 : Carga el layout visual externo usado para mostrar el teclado del asistente.
     {
         std::wstring errLayout;
         if (!CargarLayoutTecladoVisual(g_setup.rutaLayoutJson, g_setup.layout, &errLayout))
@@ -1122,9 +1193,11 @@ bool EjecutarSetupTecladoCID(HINSTANCE hInstance, const std::wstring& rutaCalibr
         g_setup.layoutCargado = true;
     }
 
+    // CID-16-72 : Registra la clase del asistente antes de crear la ventana principal.
     if (!RegistrarClaseVentana(hInstance, error))
         return false;
 
+    // CID-16-73 : Crea la ventana principal del asistente de calibración del teclado.
     HWND hwnd = CreateWindowExW(
         0,
         kClaseVentanaSetup,
@@ -1152,6 +1225,7 @@ bool EjecutarSetupTecladoCID(HINSTANCE hInstance, const std::wstring& rutaCalibr
     SetForegroundWindow(hwnd);
     SetFocus(hwnd);
 
+    // CID-16-74 : Mantiene el bucle modal del asistente y captura scanCodes antes del despacho normal.
     MSG msg;
     while (GetMessageW(&msg, nullptr, 0, 0) > 0)
     {
@@ -1173,6 +1247,7 @@ bool EjecutarSetupTecladoCID(HINSTANCE hInstance, const std::wstring& rutaCalibr
         DispatchMessageW(&msg);
     }
 
+    // CID-16-75 : Traduce el resultado final del asistente a éxito real o mensaje de error para el llamador.
     if (!g_setup.guardadoOk)
     {
         if (error)

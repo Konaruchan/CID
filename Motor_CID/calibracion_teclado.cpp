@@ -1,29 +1,34 @@
+// CID-14-01 : Inclusión de la implementación del sistema de calibración persistente del teclado CID.
 #include "calibracion_teclado.h"
+
+// CID-14-02 : Inclusión del mapa oficial de teclas CID usado para validar y ordenar asignaciones.
 #include "mapa_teclas_cid.h"
 
+// CID-14-03 : Inclusión de utilidades estándar para ordenación, archivo, mapas, regex y streams.
 #include <algorithm>
 #include <fstream>
 #include <map>
 #include <regex>
 #include <sstream>
 
+// CID-14-04 : Espacio interno anónimo para encapsular el estado y helpers privados de calibración.
 namespace
 {
+    // CID-14-05 : Estado global de calibración con sincronización y mapas bidireccionales nombre-scanCode.
     struct CalibracionTecladoState
     {
         CRITICAL_SECTION cs{};
         bool csIniciado = false;
         bool cargada = false;
 
-        // nombre CID -> scanCode
         std::map<std::wstring, DWORD> nombreAScan;
-
-        // scanCode -> nombre CID
         std::map<DWORD, std::wstring> scanANombre;
     };
 
+    // CID-14-06 : Instancia global única del estado de calibración del teclado.
     CalibracionTecladoState g_state;
 
+    // CID-14-07 : Inicializa la sección crítica interna la primera vez que se necesita.
     void AsegurarCS()
     {
         if (!g_state.csIniciado)
@@ -33,11 +38,13 @@ namespace
         }
     }
 
+    // CID-14-08 : Envía mensajes de depuración del módulo de calibración al visor de salida de Windows.
     void Log(const std::wstring& s)
     {
         OutputDebugStringW((s + L"\n").c_str());
     }
 
+    // CID-14-09 : Convierte una cadena estrecha UTF-8 a Unicode.
     std::wstring NarrowToWideUtf8(const std::string& s)
     {
         if (s.empty()) return L"";
@@ -51,6 +58,7 @@ namespace
         return out;
     }
 
+    // CID-14-10 : Convierte una cadena Unicode a UTF-8 para persistencia en archivo.
     std::string WideToUtf8(const std::wstring& s)
     {
         if (s.empty()) return "";
@@ -64,6 +72,7 @@ namespace
         return out;
     }
 
+    // CID-14-11 : Lee un archivo de texto UTF-8, elimina BOM si existe y devuelve su contenido Unicode.
     bool LeerArchivoTextoUtf8(const std::wstring& ruta, std::wstring& outTexto, std::wstring* error)
     {
         std::ifstream f(ruta, std::ios::binary);
@@ -76,7 +85,6 @@ namespace
         std::string bytes((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
         f.close();
 
-        // Quitar BOM UTF-8 si existe
         if (bytes.size() >= 3 &&
             (unsigned char)bytes[0] == 0xEF &&
             (unsigned char)bytes[1] == 0xBB &&
@@ -89,6 +97,7 @@ namespace
         return true;
     }
 
+    // CID-14-12 : Escribe un archivo de texto UTF-8 con BOM a partir de una cadena Unicode.
     bool EscribirArchivoTextoUtf8(const std::wstring& ruta, const std::wstring& texto, std::wstring* error)
     {
         std::ofstream f(ruta, std::ios::binary | std::ios::trunc);
@@ -107,16 +116,16 @@ namespace
         return true;
     }
 
+    // CID-14-13 : Decide si un nombre CID puede participar en calibración persistente.
     bool EsNombreCIDCalibrable(const wchar_t* nombreCid)
     {
         if (!nombreCid || !nombreCid[0]) return false;
 
-        // En calibración guardamos teclas CID físicas + AUX_CID.
-        // CID_KEY no hace falta si espacio sigue por VK_SPACE.
         if (wcscmp(nombreCid, L"CID_KEY") == 0) return false;
         return EsNombreTeclaCIDValido(nombreCid);
     }
 
+    // CID-14-14 : Devuelve la lista ordenada oficial de nombres CID que deben guardarse en calibración.
     std::vector<std::wstring> ObtenerNombresCIDCalibrablesOrdenados()
     {
         std::vector<std::wstring> nombres =
@@ -130,6 +139,7 @@ namespace
         return nombres;
     }
 
+    // CID-14-15 : Limpia completamente el estado interno de calibración y marca el sistema como no cargado.
     void LimpiarNoLock()
     {
         g_state.nombreAScan.clear();
@@ -137,6 +147,7 @@ namespace
         g_state.cargada = false;
     }
 
+    // CID-14-16 : Establece una asignación nombre-scanCode manteniendo coherencia bidireccional sin duplicados.
     bool EstablecerAsignacionNoLock(const std::wstring& nombreCid, DWORD scanCode)
     {
         if (!EsNombreCIDCalibrable(nombreCid.c_str()))
@@ -145,7 +156,7 @@ namespace
         if (scanCode == 0 || scanCode >= 256)
             return false;
 
-        // Si este nombre ya existía, eliminar reverse anterior
+        // CID-14-17 : Si el nombre ya existía, elimina antes su asociación inversa anterior.
         std::map<std::wstring, DWORD>::iterator itNombre = g_state.nombreAScan.find(nombreCid);
         if (itNombre != g_state.nombreAScan.end())
         {
@@ -154,7 +165,7 @@ namespace
             g_state.nombreAScan.erase(itNombre);
         }
 
-        // Si este scanCode ya estaba asignado a otro nombre, eliminar esa asignación
+        // CID-14-18 : Si el scanCode ya estaba asignado, elimina la asociación previa del nombre antiguo.
         std::map<DWORD, std::wstring>::iterator itScan = g_state.scanANombre.find(scanCode);
         if (itScan != g_state.scanANombre.end())
         {
@@ -169,6 +180,7 @@ namespace
         return true;
     }
 
+    // CID-14-19 : Escapa una cadena Unicode para poder escribirla con seguridad dentro de JSON.
     std::wstring EscaparJson(const std::wstring& s)
     {
         std::wstring out;
@@ -191,15 +203,7 @@ namespace
         return out;
     }
 
-    // Parser simple para el formato:
-    // {
-    //   "version": 1,
-    //   "keys": {
-    //      "I1": 4,
-    //      ...
-    //      "AUX_CID": 41
-    //   }
-    // }
+    // CID-14-20 : Parsea el JSON de calibración, valida asignaciones y las aplica al estado global.
     bool ParsearCalibracionJson(const std::wstring& texto, std::wstring* error)
     {
         std::wregex reKeysBlock(L"\"keys\"\\s*:\\s*\\{([\\s\\S]*?)\\}", std::regex::ECMAScript);
@@ -219,6 +223,7 @@ namespace
 
         std::map<std::wstring, DWORD> temporales;
 
+        // CID-14-21 : Extrae pares nombre-scanCode válidos desde el bloque JSON keys.
         for (; it != end; ++it)
         {
             std::wstring nombre = (*it)[1].str();
@@ -226,7 +231,6 @@ namespace
 
             if (!EsNombreCIDCalibrable(nombre.c_str()))
             {
-                // Ignoramos claves raras por si luego ampliáis JSON
                 continue;
             }
 
@@ -239,13 +243,14 @@ namespace
             temporales[nombre] = scanCode;
         }
 
+        // CID-14-22 : Falla si el JSON no aporta ninguna asignación calibrable válida.
         if (temporales.empty())
         {
             if (error) *error = L"No se encontró ninguna asignación válida dentro de \"keys\".";
             return false;
         }
 
-        // Validar duplicados de scanCode
+        // CID-14-23 : Detecta scanCodes duplicados entre distintas teclas CID antes de aplicar el estado.
         std::map<DWORD, std::wstring> vistos;
         std::map<std::wstring, DWORD>::const_iterator kv;
         for (kv = temporales.begin(); kv != temporales.end(); ++kv)
@@ -263,7 +268,7 @@ namespace
             vistos[kv->second] = kv->first;
         }
 
-        // Aplicar al estado global
+        // CID-14-24 : Sustituye el estado global por las asignaciones temporales ya validadas.
         LimpiarNoLock();
         for (kv = temporales.begin(); kv != temporales.end(); ++kv)
             EstablecerAsignacionNoLock(kv->first, kv->second);
@@ -272,6 +277,7 @@ namespace
         return true;
     }
 
+    // CID-14-25 : Construye el JSON completo de calibración a partir del estado interno actual.
     std::wstring ConstruirJsonCalibracion()
     {
         std::wstringstream ss;
@@ -303,6 +309,7 @@ namespace
     }
 }
 
+// CID-14-26 : Carga la calibración desde JSON, la valida y la publica en el estado global del sistema.
 bool CargarCalibracionTeclado(const std::wstring& rutaJson, std::wstring* error)
 {
     AsegurarCS();
@@ -330,6 +337,7 @@ bool CargarCalibracionTeclado(const std::wstring& rutaJson, std::wstring* error)
     return true;
 }
 
+// CID-14-27 : Guarda la calibración actual en disco serializándola como JSON UTF-8 con BOM.
 bool GuardarCalibracionTeclado(const std::wstring& rutaJson, std::wstring* error)
 {
     AsegurarCS();
@@ -353,6 +361,7 @@ bool GuardarCalibracionTeclado(const std::wstring& rutaJson, std::wstring* error
     return true;
 }
 
+// CID-14-28 : Limpia completamente la calibración cargada actualmente en memoria.
 void LimpiarCalibracionTeclado()
 {
     AsegurarCS();
@@ -361,6 +370,7 @@ void LimpiarCalibracionTeclado()
     LeaveCriticalSection(&g_state.cs);
 }
 
+// CID-14-29 : Informa si existe una calibración cargada y con asignaciones reales en memoria.
 bool HayCalibracionTecladoCargada()
 {
     AsegurarCS();
@@ -370,6 +380,7 @@ bool HayCalibracionTecladoCargada()
     return ok;
 }
 
+// CID-14-30 : Establece o sustituye la asignación de una tecla CID hacia un scanCode concreto.
 bool EstablecerAsignacionTeclaCID(const wchar_t* nombreCid, DWORD scanCode)
 {
     if (!nombreCid) return false;
@@ -381,6 +392,7 @@ bool EstablecerAsignacionTeclaCID(const wchar_t* nombreCid, DWORD scanCode)
     return ok;
 }
 
+// CID-14-31 : Elimina la asignación existente de una tecla CID por su nombre.
 bool QuitarAsignacionTeclaCID(const wchar_t* nombreCid)
 {
     if (!nombreCid || !nombreCid[0])
@@ -406,6 +418,7 @@ bool QuitarAsignacionTeclaCID(const wchar_t* nombreCid)
     return true;
 }
 
+// CID-14-32 : Comprueba si un scanCode ya está asociado a alguna tecla CID calibrada.
 bool ExisteTeclaCIDParaScanCode(DWORD scanCode)
 {
     if (scanCode >= 256) return false;
@@ -417,6 +430,7 @@ bool ExisteTeclaCIDParaScanCode(DWORD scanCode)
     return existe;
 }
 
+// CID-14-33 : Devuelve el nombre CID asociado a un scanCode calibrado si existe actualmente.
 const wchar_t* NombreTeclaCID_PorScanCode(DWORD scanCode)
 {
     if (scanCode >= 256) return nullptr;
@@ -431,13 +445,13 @@ const wchar_t* NombreTeclaCID_PorScanCode(DWORD scanCode)
         return nullptr;
     }
 
-    // OJO: puntero válido mientras no cambie el mapa.
     const wchar_t* out = it->second.c_str();
 
     LeaveCriticalSection(&g_state.cs);
     return out;
 }
 
+// CID-14-34 : Obtiene el scanCode asociado a un nombre CID calibrado concreto.
 bool ObtenerScanCodeDeNombreCID(const wchar_t* nombreCid, DWORD& outScanCode)
 {
     outScanCode = 0;
@@ -459,6 +473,7 @@ bool ObtenerScanCodeDeNombreCID(const wchar_t* nombreCid, DWORD& outScanCode)
     return true;
 }
 
+// CID-14-35 : Devuelve todas las asignaciones calibradas ordenadas según el orden oficial del mapa CID.
 std::vector<std::pair<std::wstring, DWORD>> ObtenerAsignacionesCalibradas()
 {
     AsegurarCS();
