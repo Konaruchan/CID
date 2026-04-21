@@ -67,6 +67,12 @@ La siguiente relación fija la equivalencia oficial entre los archivos principal
 * <a href="#cid-23">CID-23</a> — <a href="https://github.com/Konaruchan/CID/tree/main/Motor_CID/layout_teclado_visual.h"><code>layout_teclado_visual.h</code></a>
 * <a href="#cid-24">CID-24</a> — <a href="https://github.com/Konaruchan/CID/tree/main/Motor_CID/mapa_teclas_cid.cpp"><code>mapa_teclas_cid.cpp</code></a>
 * <a href="#cid-25">CID-25</a> — <a href="https://github.com/Konaruchan/CID/tree/main/Motor_CID/mapa_teclas_cid.h"><code>mapa_teclas_cid.h</code></a>
+* CID-26 — <code>engine_context.cpp</code>
+* CID-27 — <code>engine_context.h</code>
+* CID-28 — <code>event_bus.cpp</code>
+* CID-29 — <code>event_bus.h</code>
+* CID-30 — <code>platform.h</code>
+* CID-31 — <code>platform_win32.cpp</code>
 
 
 # Archivos
