@@ -139,6 +139,8 @@
   <ItemGroup>
     <ClCompile Include="bitacora_cid.cpp" />
     <ClCompile Include="calibracion_teclado.cpp" />
+    <ClCompile Include="engine_context.cpp" />
+    <ClCompile Include="event_bus.cpp" />
     <ClCompile Include="detector_acorde.cpp" />
     <ClCompile Include="diccionario_cid.cpp" />
     <ClCompile Include="gestor_asentado.cpp" />
@@ -147,6 +149,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mapa_teclas_cid.cpp" />
     <ClCompile Include="panel_contexto_texto.cpp" />
+    <ClCompile Include="platform_win32.cpp" />
     <ClCompile Include="setup_teclado_cid.cpp" />
     <ClCompile Include="superposicion_cid.cpp" />
     <ClCompile Include="teclado_cid.cpp" />
@@ -154,6 +157,8 @@
   <ItemGroup>
     <ClInclude Include="bitacora_cid.h" />
     <ClInclude Include="calibracion_teclado.h" />
+    <ClInclude Include="engine_context.h" />
+    <ClInclude Include="event_bus.h" />
     <ClInclude Include="detector_acorde.h" />
     <ClInclude Include="diccionario_cid.h" />
     <ClInclude Include="gestor_asentado.h" />
@@ -161,6 +166,7 @@
     <ClInclude Include="layout_teclado_visual.h" />
     <ClInclude Include="mapa_teclas_cid.h" />
     <ClInclude Include="panel_contexto_texto.h" />
+    <ClInclude Include="platform.h" />
     <ClInclude Include="setup_teclado_cid.h" />
     <ClInclude Include="superposicion_cid.h" />
     <ClInclude Include="teclado_cid.h" />
@@ -172,9 +178,9 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="..\..\..\..\Downloads\keyboard-layout.json">
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
+    <None Include="Resources\keyboard-layout.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

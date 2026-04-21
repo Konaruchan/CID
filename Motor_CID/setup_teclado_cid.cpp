@@ -93,6 +93,26 @@ namespace
         return a + L"\\" + b;
     }
 
+    bool ExisteArchivo(const std::wstring& ruta)
+    {
+        DWORD attr = GetFileAttributesW(ruta.c_str());
+        return (attr != INVALID_FILE_ATTRIBUTES) && !(attr & FILE_ATTRIBUTE_DIRECTORY);
+    }
+
+    std::wstring ResolverRutaLayoutJsonSetup()
+    {
+        const std::wstring exeDir = DirectorioExe();
+        const std::wstring rutaRaiz = Unir(exeDir, L"keyboard-layout.json");
+        if (ExisteArchivo(rutaRaiz))
+            return rutaRaiz;
+
+        const std::wstring rutaResources = Unir(exeDir, L"Resources\\keyboard-layout.json");
+        if (ExisteArchivo(rutaResources))
+            return rutaResources;
+
+        return rutaRaiz;
+    }
+
     // CID-16-12 : Recorta espacios en blanco al inicio y final de una cadena ancha.
     std::wstring Trim(const std::wstring& s)
     {
@@ -1146,7 +1166,7 @@ bool EjecutarSetupTecladoCID(HINSTANCE hInstance, const std::wstring& rutaCalibr
     g_setup = SetupState{};
     g_setup.hInstance = hInstance;
     g_setup.rutaCalibrationJson = rutaCalibrationJson;
-    g_setup.rutaLayoutJson = Unir(DirectorioExe(), L"keyboard-layout.json");
+    g_setup.rutaLayoutJson = ResolverRutaLayoutJsonSetup();
 
     LimpiarCalibracionTeclado();
 
