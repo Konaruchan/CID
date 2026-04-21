@@ -5,64 +5,58 @@
 #include "calibracion_teclado.h"
 #include "inyeccion_texto.h"
 #include "panel_contexto_texto.h"
+#include "engine_context.h"
+#include "event_bus.h"
+#include "platform.h"
 
 // CID-02-03 : Inclusión de cabeceras del sistema y utilidades de texto necesarias para el hook global.
 #include <windows.h>
 #include <string>
 
-// CID-02-04 : Estado global del hook de teclado, callback de eventos y modo activo del sistema CID.
-static HHOOK g_hook = nullptr;
-static CallbackTeclaCID g_callback = nullptr;
-static bool g_modo_cid = true;
-
-// CID-02-05 : Estado de teclas presionadas por virtual key y scan code para detectar autorepeticiones.
-static bool g_vk_abajo[256] = {};
-static bool g_sc_abajo[256] = {};
-
-// CID-02-06 : Envía mensajes de depuración del módulo de teclado al visor de salida de Windows.
+// CID-02-04 : Envía mensajes de depuración del módulo de teclado al visor de salida de Windows.
 static void Log(const std::wstring& s)
 {
     OutputDebugStringW((s + L"\n").c_str());
 }
 
-// CID-02-07 : Comprueba si una virtual key cabe dentro del rango indexable de los buffers internos.
+// CID-02-05 : Comprueba si una virtual key cabe dentro del rango indexable de los buffers internos.
 static bool EsVkEnRangoByte(DWORD vk)
 {
     return vk < 256;
 }
 
-// CID-02-08 : Comprueba si un scan code cabe dentro del rango indexable de los buffers internos.
+// CID-02-06 : Comprueba si un scan code cabe dentro del rango indexable de los buffers internos.
 static bool EsScanCodeEnRangoByte(DWORD scanCode)
 {
     return scanCode < 256;
 }
 
-// CID-02-09 : Detecta si la tecla Control está activa en este instante.
+// CID-02-07 : Detecta si la tecla Control está activa en este instante.
 static bool EstaCtrlActivo()
 {
-    return (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+    return (PlataformaCIDActual()->AsyncKeyState(VK_CONTROL) & 0x8000) != 0;
 }
 
-// CID-02-10 : Detecta si la tecla Alt está activa en este instante.
+// CID-02-08 : Detecta si la tecla Alt está activa en este instante.
 static bool EstaAltActivo()
 {
-    return (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+    return (PlataformaCIDActual()->AsyncKeyState(VK_MENU) & 0x8000) != 0;
 }
 
-// CID-02-11 : Detecta si alguna tecla Windows está activa en este instante.
+// CID-02-09 : Detecta si alguna tecla Windows está activa en este instante.
 static bool EstaWinActivo()
 {
-    return (GetAsyncKeyState(VK_LWIN) & 0x8000) != 0 ||
-        (GetAsyncKeyState(VK_RWIN) & 0x8000) != 0;
+    return (PlataformaCIDActual()->AsyncKeyState(VK_LWIN) & 0x8000) != 0 ||
+        (PlataformaCIDActual()->AsyncKeyState(VK_RWIN) & 0x8000) != 0;
 }
 
-// CID-02-12 : Identifica si la tecla recibida corresponde al pedal principal físico de CID.
+// CID-02-10 : Identifica si la tecla recibida corresponde al pedal principal físico de CID.
 static bool EsPedalPrincipalCID(DWORD vk)
 {
     return vk == VK_SPACE;
 }
 
-// CID-02-13 : Comprueba si un scan code pertenece a una tecla CID reconocida por la calibración cargada.
+// CID-02-11 : Comprueba si un scan code pertenece a una tecla CID reconocida por la calibración cargada.
 static bool EsTeclaCIDCalibrada(DWORD scanCode)
 {
     if (!EsScanCodeEnRangoByte(scanCode))
@@ -72,7 +66,7 @@ static bool EsTeclaCIDCalibrada(DWORD scanCode)
     return nombre != nullptr;
 }
 
-// CID-02-14 : Determina si una tecla física forma parte del conjunto operativo de entrada CID.
+// CID-02-12 : Determina si una tecla física forma parte del conjunto operativo de entrada CID.
 static bool EsTeclaCIDFisica(DWORD vk, DWORD scanCode)
 {
     if (EsPedalPrincipalCID(vk))
@@ -81,7 +75,7 @@ static bool EsTeclaCIDFisica(DWORD vk, DWORD scanCode)
     return EsTeclaCIDCalibrada(scanCode);
 }
 
-// CID-02-15 : Permite pasar ciertas teclas de formato que no deben bloquearse en modo CID.
+// CID-02-13 : Permite pasar ciertas teclas de formato que no deben bloquearse en modo CID.
 static bool EsTeclaFormatoPermitida(DWORD vk)
 {
     switch (vk)
@@ -98,7 +92,7 @@ static bool EsTeclaFormatoPermitida(DWORD vk)
     }
 }
 
-// CID-02-16 : Determina si una tecla pertenece al conjunto de entrada escribible normal de QWERTY.
+// CID-02-14 : Determina si una tecla pertenece al conjunto de entrada escribible normal de QWERTY.
 static bool EsVkEscribibleQwerty(DWORD vk)
 {
     if ((vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9'))
@@ -131,7 +125,7 @@ static bool EsVkEscribibleQwerty(DWORD vk)
     }
 }
 
-// CID-02-17 : Detecta autorepetición por virtual key y actualiza su estado de pulsación.
+// CID-02-15 : Detecta autorepetición por virtual key y actualiza su estado de pulsación.
 static bool EsAutorepeatVk(DWORD vk, bool presionada)
 {
     if (!EsVkEnRangoByte(vk))
@@ -139,16 +133,16 @@ static bool EsAutorepeatVk(DWORD vk, bool presionada)
 
     if (!presionada)
     {
-        g_vk_abajo[vk] = false;
+        TCtx().vk_abajo[vk] = false;
         return false;
     }
 
-    bool repetida = g_vk_abajo[vk];
-    g_vk_abajo[vk] = true;
+    bool repetida = TCtx().vk_abajo[vk];
+    TCtx().vk_abajo[vk] = true;
     return repetida;
 }
 
-// CID-02-18 : Detecta autorepetición por scan code y actualiza su estado de pulsación.
+// CID-02-16 : Detecta autorepetición por scan code y actualiza su estado de pulsación.
 static bool EsAutorepeatScanCode(DWORD scanCode, bool presionada)
 {
     if (!EsScanCodeEnRangoByte(scanCode))
@@ -156,102 +150,102 @@ static bool EsAutorepeatScanCode(DWORD scanCode, bool presionada)
 
     if (!presionada)
     {
-        g_sc_abajo[scanCode] = false;
+        TCtx().sc_abajo[scanCode] = false;
         return false;
     }
 
-    bool repetida = g_sc_abajo[scanCode];
-    g_sc_abajo[scanCode] = true;
+    bool repetida = TCtx().sc_abajo[scanCode];
+    TCtx().sc_abajo[scanCode] = true;
     return repetida;
 }
 
-// CID-02-19 : Reinicia por completo el estado interno de teclas pulsadas del módulo de captura.
+// CID-02-17 : Reinicia por completo el estado interno de teclas pulsadas del módulo de captura.
 static void ReiniciarEstadosTeclas()
 {
     for (int i = 0; i < 256; ++i)
     {
-        g_vk_abajo[i] = false;
-        g_sc_abajo[i] = false;
+        TCtx().vk_abajo[i] = false;
+        TCtx().sc_abajo[i] = false;
     }
 }
 
-// CID-02-20 : Procesa cada evento del hook global y decide si dejar pasar, notificar o interceptar la tecla.
+// CID-02-18 : Procesa cada evento del hook global y decide si dejar pasar, notificar o interceptar la tecla.
 static LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
-    // CID-02-21 : Reenvía inmediatamente eventos inválidos o no accionables al siguiente hook del sistema.
+    // CID-02-19 : Reenvía inmediatamente eventos inválidos o no accionables al siguiente hook del sistema.
     if (nCode < 0)
-        return CallNextHookEx(g_hook, nCode, wParam, lParam);
+        return CallNextHookEx(TCtx().hook, nCode, wParam, lParam);
 
     if (nCode != HC_ACTION)
-        return CallNextHookEx(g_hook, nCode, wParam, lParam);
+        return CallNextHookEx(TCtx().hook, nCode, wParam, lParam);
 
     const KBDLLHOOKSTRUCT* k = reinterpret_cast<const KBDLLHOOKSTRUCT*>(lParam);
     if (!k)
-        return CallNextHookEx(g_hook, nCode, wParam, lParam);
+        return CallNextHookEx(TCtx().hook, nCode, wParam, lParam);
 
-    // CID-02-22 : Clasifica el evento como pulsación o liberación y descarta cualquier otro tipo.
+    // CID-02-20 : Clasifica el evento como pulsación o liberación y descarta cualquier otro tipo.
     const bool presionada = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
     const bool liberada = (wParam == WM_KEYUP || wParam == WM_SYSKEYUP);
 
     if (!presionada && !liberada)
-        return CallNextHookEx(g_hook, nCode, wParam, lParam);
+        return CallNextHookEx(TCtx().hook, nCode, wParam, lParam);
 
-    // CID-02-23 : Extrae la virtual key y el scan code de la tecla recibida por el hook.
+    // CID-02-21 : Extrae la virtual key y el scan code de la tecla recibida por el hook.
     const DWORD vk = k->vkCode;
     const DWORD scanCode = k->scanCode;
 
-    // CID-02-24 : Nunca intercepta eventos generados por la propia inyección de texto del sistema CID.
+    // CID-02-22 : Nunca intercepta eventos generados por la propia inyección de texto del sistema CID.
     if (InyeccionActiva())
-        return CallNextHookEx(g_hook, nCode, wParam, lParam);
+        return CallNextHookEx(TCtx().hook, nCode, wParam, lParam);
 
-    // CID-02-25 : Calcula el estado actual de modificadores del sistema para evitar interferir con atajos globales.
+    // CID-02-23 : Calcula el estado actual de modificadores del sistema para evitar interferir con atajos globales.
     const bool ctrl_activo = EstaCtrlActivo();
     const bool alt_activo = EstaAltActivo();
     const bool win_activo = EstaWinActivo();
     const bool hay_modificador_sistema = ctrl_activo || alt_activo || win_activo;
 
-    // CID-02-26 : En modo QWERTY solo despierta el panel contextual con pulsaciones escribibles reales y deja pasar todo.
-    if (!g_modo_cid)
+    // CID-02-24 : En modo QWERTY solo despierta el panel contextual con pulsaciones escribibles reales y deja pasar todo.
+    if (!TCtx().modo_cid)
     {
-        // CID-02-27 : Notifica actividad escribible al panel solo en pulsaciones nuevas y sin modificadores de sistema.
+        // CID-02-25 : Notifica actividad escribible al panel solo en pulsaciones nuevas y sin modificadores de sistema.
         if (presionada &&
             !hay_modificador_sistema &&
             EsVkEscribibleQwerty(vk))
         {
             bool repetida = EsAutorepeatVk(vk, true);
             if (!repetida)
-                NotificarActividadEscribiblePanelContextoTexto();
+                PublicarEventBusCID(EventBusCIDEvento{ EventBusCIDTipo::ActividadEscribible, PlataformaCIDActual()->NowMs(), L"teclado" });
         }
-        // CID-02-28 : Limpia el estado de la tecla al liberarse para mantener consistente el control de autorepetición.
+        // CID-02-26 : Limpia el estado de la tecla al liberarse para mantener consistente el control de autorepetición.
         else if (liberada && EsVkEnRangoByte(vk))
         {
-            g_vk_abajo[vk] = false;
+            TCtx().vk_abajo[vk] = false;
         }
 
-        return CallNextHookEx(g_hook, nCode, wParam, lParam);
+        return CallNextHookEx(TCtx().hook, nCode, wParam, lParam);
     }
 
-    // CID-02-29 : En modo CID deja pasar combinaciones con modificadores del sistema para no romper atajos ni accesos externos.
+    // CID-02-27 : En modo CID deja pasar combinaciones con modificadores del sistema para no romper atajos ni accesos externos.
     if (hay_modificador_sistema)
     {
         if (liberada && EsVkEnRangoByte(vk))
-            g_vk_abajo[vk] = false;
+            TCtx().vk_abajo[vk] = false;
         if (liberada && EsScanCodeEnRangoByte(scanCode))
-            g_sc_abajo[scanCode] = false;
+            TCtx().sc_abajo[scanCode] = false;
 
-        return CallNextHookEx(g_hook, nCode, wParam, lParam);
+        return CallNextHookEx(TCtx().hook, nCode, wParam, lParam);
     }
 
-    // CID-02-30 : En modo CID deja pasar teclas de formato permitidas y solo limpia su estado al liberarse.
+    // CID-02-28 : En modo CID deja pasar teclas de formato permitidas y solo limpia su estado al liberarse.
     if (EsTeclaFormatoPermitida(vk))
     {
         if (liberada && EsVkEnRangoByte(vk))
-            g_vk_abajo[vk] = false;
+            TCtx().vk_abajo[vk] = false;
 
-        return CallNextHookEx(g_hook, nCode, wParam, lParam);
+        return CallNextHookEx(TCtx().hook, nCode, wParam, lParam);
     }
 
-    // CID-02-31 : Captura las teclas físicas de CID, detecta autorepetición y las reenvía al detector de acordes.
+    // CID-02-29 : Captura las teclas físicas de CID, detecta autorepetición y las reenvía al detector de acordes.
     if (EsTeclaCIDFisica(vk, scanCode))
     {
         bool repetida = false;
@@ -261,108 +255,108 @@ static LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam)
         else
             repetida = EsAutorepeatScanCode(scanCode, presionada);
 
-        // CID-02-32 : Notifica actividad escribible al panel contextual solo en pulsaciones nuevas de teclas CID.
+        // CID-02-30 : Notifica actividad escribible al panel contextual solo en pulsaciones nuevas de teclas CID.
         if (presionada && !repetida)
-            NotificarActividadEscribiblePanelContextoTexto();
+            PublicarEventBusCID(EventBusCIDEvento{ EventBusCIDTipo::ActividadEscribible, PlataformaCIDActual()->NowMs(), L"teclado" });
 
-        // CID-02-33 : Llama al callback registrado evitando reenviar pulsaciones autorepetidas innecesarias.
-        if (g_callback)
+        // CID-02-31 : Llama al callback registrado evitando reenviar pulsaciones autorepetidas innecesarias.
+        if (TCtx().callback)
         {
             if (!presionada || !repetida)
-                g_callback(vk, scanCode, presionada);
+                TCtx().callback(vk, scanCode, presionada);
         }
 
         return 1;
     }
 
-    // CID-02-34 : Bloquea teclas escribibles QWERTY normales para evitar texto accidental mientras CID está activo.
+    // CID-02-32 : Bloquea teclas escribibles QWERTY normales para evitar texto accidental mientras CID está activo.
     if (EsVkEscribibleQwerty(vk))
     {
         if (liberada && EsVkEnRangoByte(vk))
-            g_vk_abajo[vk] = false;
+            TCtx().vk_abajo[vk] = false;
         return 1;
     }
 
-    // CID-02-35 : Deja pasar el resto de teclas no escribibles y limpia sus estados internos al liberarse.
+    // CID-02-33 : Deja pasar el resto de teclas no escribibles y limpia sus estados internos al liberarse.
     if (liberada && EsVkEnRangoByte(vk))
-        g_vk_abajo[vk] = false;
+        TCtx().vk_abajo[vk] = false;
     if (liberada && EsScanCodeEnRangoByte(scanCode))
-        g_sc_abajo[scanCode] = false;
+        TCtx().sc_abajo[scanCode] = false;
 
-    return CallNextHookEx(g_hook, nCode, wParam, lParam);
+    return CallNextHookEx(TCtx().hook, nCode, wParam, lParam);
 }
 
-// CID-02-36 : Instala el hook global de teclado CID si todavía no está activo.
+// CID-02-34 : Instala el hook global de teclado CID si todavía no está activo.
 bool IniciarTecladoCID()
 {
-    // CID-02-37 : Evita reinstalar el hook si el módulo ya está iniciado.
-    if (g_hook)
+    // CID-02-35 : Evita reinstalar el hook si el módulo ya está iniciado.
+    if (TCtx().hook)
         return true;
 
-    // CID-02-38 : Reinicia el estado interno de teclas antes de enganchar la captura global.
+    // CID-02-36 : Reinicia el estado interno de teclas antes de enganchar la captura global.
     ReiniciarEstadosTeclas();
 
-    // CID-02-39 : Instala el hook de bajo nivel para interceptar eventos de teclado en todo el sistema.
-    g_hook = SetWindowsHookExW(
+    // CID-02-37 : Instala el hook de bajo nivel para interceptar eventos de teclado en todo el sistema.
+    TCtx().hook = SetWindowsHookExW(
         WH_KEYBOARD_LL,
         HookProc,
         GetModuleHandleW(nullptr),
         0
     );
 
-    // CID-02-40 : Registra error y falla el arranque si no se pudo instalar el hook global.
-    if (!g_hook)
+    // CID-02-38 : Registra error y falla el arranque si no se pudo instalar el hook global.
+    if (!TCtx().hook)
     {
         Log(L"ERROR: no se pudo instalar el hook de teclado CID.");
         return false;
     }
 
-    // CID-02-41 : Registra el arranque correcto del hook global de teclado.
+    // CID-02-39 : Registra el arranque correcto del hook global de teclado.
     Log(L"Hook global de teclado CID iniciado.");
     return true;
 }
 
-// CID-02-42 : Desinstala el hook global de teclado y limpia el estado interno del módulo.
+// CID-02-40 : Desinstala el hook global de teclado y limpia el estado interno del módulo.
 void DetenerTecladoCID()
 {
-    // CID-02-43 : Desengancha el hook solo si actualmente estaba activo.
-    if (g_hook)
+    // CID-02-41 : Desengancha el hook solo si actualmente estaba activo.
+    if (TCtx().hook)
     {
-        UnhookWindowsHookEx(g_hook);
-        g_hook = nullptr;
+        UnhookWindowsHookEx(TCtx().hook);
+        TCtx().hook = nullptr;
     }
 
-    // CID-02-44 : Reinicia estados residuales y registra el cierre del módulo de teclado.
+    // CID-02-42 : Reinicia estados residuales y registra el cierre del módulo de teclado.
     ReiniciarEstadosTeclas();
     Log(L"Hook global de teclado CID detenido.");
 }
 
-// CID-02-45 : Registra el callback que recibirá los eventos de teclas CID ya filtrados por el hook.
+// CID-02-43 : Registra el callback que recibirá los eventos de teclas CID ya filtrados por el hook.
 void RegistrarCallbackTecladoCID(CallbackTeclaCID cb)
 {
-    g_callback = cb;
+    TCtx().callback = cb;
 }
 
-// CID-02-46 : Devuelve si el módulo se encuentra actualmente operando en modo CID.
+// CID-02-44 : Devuelve si el módulo se encuentra actualmente operando en modo CID.
 bool EstaModoCID()
 {
-    return g_modo_cid;
+    return TCtx().modo_cid;
 }
 
-// CID-02-47 : Alterna entre modo CID y modo QWERTY y reinicia el estado interno del teclado.
+// CID-02-45 : Alterna entre modo CID y modo QWERTY y reinicia el estado interno del teclado.
 void AlternarModoCID()
 {
-    g_modo_cid = !g_modo_cid;
+    TCtx().modo_cid = !TCtx().modo_cid;
     ReiniciarEstadosTeclas();
 
-    Log(g_modo_cid ? L"MODO CID: ON" : L"MODO CID: OFF (QWERTY)");
+    Log(TCtx().modo_cid ? L"MODO CID: ON" : L"MODO CID: OFF (QWERTY)");
 }
 
-// CID-02-48 : Establece explícitamente el modo de funcionamiento del teclado y reinicia sus estados internos.
+// CID-02-46 : Establece explícitamente el modo de funcionamiento del teclado y reinicia sus estados internos.
 void EstablecerModoCID(bool activo)
 {
-    g_modo_cid = activo;
+    TCtx().modo_cid = activo;
     ReiniciarEstadosTeclas();
 
-    Log(g_modo_cid ? L"MODO CID: ON" : L"MODO CID: OFF (QWERTY)");
+    Log(TCtx().modo_cid ? L"MODO CID: ON" : L"MODO CID: OFF (QWERTY)");
 }
