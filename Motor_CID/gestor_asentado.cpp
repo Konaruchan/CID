@@ -49,6 +49,7 @@ static const int MARGEN_MS = 60;
 
 static const int AUTO_MIN_MS = 120;
 static const int AUTO_MAX_MS = 700;
+static const DWORD CHEQUEO_MS = 50;
 
 static const int HISTERESIS_MS = 20;
 static const int PASO_MAX_MS = 25;
