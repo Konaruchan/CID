@@ -247,14 +247,14 @@ void DetenerDetectorAcorde()
     // CID-04-35 : Elimina el temporizador activo si todavía existe dentro de la cola del detector.
     if (DCtx().timer && DCtx().timer_queue)
     {
-        DeleteTimerQueueTimer(DCtx().timer_queue, DCtx().timer, INVALID_HANDLE_VALUE);
+        (void)DeleteTimerQueueTimer(DCtx().timer_queue, DCtx().timer, INVALID_HANDLE_VALUE);
         DCtx().timer = nullptr;
     }
 
     // CID-04-36 : Elimina la cola de temporizadores completa cuando el detector se apaga.
     if (DCtx().timer_queue)
     {
-        DeleteTimerQueueEx(DCtx().timer_queue, INVALID_HANDLE_VALUE);
+        (void)DeleteTimerQueueEx(DCtx().timer_queue, INVALID_HANDLE_VALUE);
         DCtx().timer_queue = nullptr;
     }
 
@@ -395,6 +395,9 @@ void RecibirEventoTeclaCID(DWORD vk, DWORD scanCode, bool presionada)
         EventoTeclaCID_Key(presionada);
         return;
     }
+
+    if (scanCode >= 256)
+        return;
 
     // CID-04-56 : Resuelve el nombre CID del scan code recibido y descarta teclas no calibradas.
     const wchar_t* nombreCid = NombreTeclaCID_PorScanCode(scanCode);
