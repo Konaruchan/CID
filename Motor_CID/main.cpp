@@ -13,6 +13,8 @@
 #include "calibracion_teclado.h"
 #include "setup_teclado_cid.h"
 #include "panel_contexto_texto.h"
+#include "event_bus.h"
+#include "platform.h"
 
 // CID-01-03 : Identificadores de hotkeys globales para salir del motor y alternar el modo CID.
 static const int HOTKEY_SALIR_ID = 1;
@@ -73,7 +75,16 @@ static std::wstring ResolverRutaCid0(std::wstring* trazado)
 // CID-01-10 : Resuelve la ruta del archivo de layout visual del teclado CID.
 static std::wstring ResolverRutaKeyboardLayoutJson()
 {
-    return Unir(DirectorioExe(), L"keyboard-layout.json");
+    const std::wstring exeDir = DirectorioExe();
+    const std::wstring rutaLocal = Unir(exeDir, L"keyboard-layout.json");
+    if (ExisteArchivo(rutaLocal))
+        return rutaLocal;
+
+    const std::wstring rutaResource = Unir(exeDir, L"Resources\\keyboard-layout.json");
+    if (ExisteArchivo(rutaResource))
+        return rutaResource;
+
+    return rutaLocal;
 }
 
 // CID-01-11 : Resuelve la ruta del archivo de calibración persistente del teclado CID.
@@ -90,6 +101,7 @@ static void LimpiezaFatal(bool hotkey_salir_ok, bool hotkey_toggle_ok, HANDLE mu
     DetenerGestorAsentado();
     DetenerPanelContextoTexto();
     DetenerSuperposicionCID();
+    DetenerEventBusCID();
 
     if (hotkey_salir_ok)  UnregisterHotKey(nullptr, HOTKEY_SALIR_ID);
     if (hotkey_toggle_ok) UnregisterHotKey(nullptr, HOTKEY_TOGGLE_CID_ID);
@@ -130,6 +142,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
         return 0;
     }
 
+    RestablecerPlataformaCIDPredeterminada();
+
+    if (!IniciarEventBusCID())
+    {
+        MessageBoxW(nullptr, L"No se pudo iniciar el bus interno de eventos.", L"Motor CID", MB_OK | MB_ICONERROR);
+        CloseHandle(mutex_instancia);
+        return 1;
+    }
+
     // CID-01-16 : Registra la hotkey global de salida y avisa si no se puede reservar.
     bool hotkey_salir_ok =
         RegisterHotKey(nullptr, HOTKEY_SALIR_ID, MOD_CONTROL | MOD_SHIFT, VK_F9) != 0;
@@ -148,6 +169,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
         MessageBoxW(nullptr, L"No se pudo iniciar la superposición CID.", L"Motor CID", MB_OK | MB_ICONERROR);
         if (hotkey_salir_ok)  UnregisterHotKey(nullptr, HOTKEY_SALIR_ID);
         if (hotkey_toggle_ok) UnregisterHotKey(nullptr, HOTKEY_TOGGLE_CID_ID);
+        DetenerEventBusCID();
         CloseHandle(mutex_instancia);
         return 1;
     }
@@ -157,6 +179,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
     {
         MessageBoxW(nullptr, L"No se pudo iniciar el panel contextual de texto.", L"Motor CID", MB_OK | MB_ICONERROR);
         DetenerSuperposicionCID();
+        DetenerEventBusCID();
         if (hotkey_salir_ok)  UnregisterHotKey(nullptr, HOTKEY_SALIR_ID);
         if (hotkey_toggle_ok) UnregisterHotKey(nullptr, HOTKEY_TOGGLE_CID_ID);
         CloseHandle(mutex_instancia);
@@ -331,6 +354,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
     DetenerGestorAsentado();
     DetenerPanelContextoTexto();
     DetenerSuperposicionCID();
+    DetenerEventBusCID();
 
     // CID-01-45 : Libera las hotkeys globales que hubieran sido registradas con éxito.
     if (hotkey_salir_ok)  UnregisterHotKey(nullptr, HOTKEY_SALIR_ID);

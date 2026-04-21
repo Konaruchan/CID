@@ -1,4 +1,4 @@
-// CID-18-01 : Inclusión de la implementación del panel de contexto de texto del sistema CID.
+﻿// CID-18-01 : Inclusión de la implementación del panel de contexto de texto del sistema CID.
 #include "panel_contexto_texto.h"
 
 // CID-18-02 : Inclusión de la superposición visual controlada por el detector de contexto editable.
@@ -8,6 +8,8 @@
 #include <windows.h>
 #include <UIAutomation.h>
 #include <string>
+#include "event_bus.h"
+#include "platform.h"
 
 // CID-18-04 : Vinculación explícita de bibliotecas necesarias para UI Automation y COM.
 #pragma comment(lib, "Uiautomationcore.lib")
@@ -36,6 +38,9 @@ static std::wstring g_ultimo_origen_log;
 
 // CID-18-08 : Marca temporal del último input realmente escribible detectado.
 static ULONGLONG g_ultimo_input_escribible_tick = 0;
+static ULONGLONG g_ultimo_evento_actividad_tick = 0;
+static EventBusCIDSubId g_sub_actividad = 0;
+static const ULONGLONG DEDUPE_ACTIVIDAD_MS = 30;
 
 // CID-18-09 : Estructura del contexto de texto detectado en un momento dado.
 struct ContextoTextoDetectado
@@ -498,7 +503,7 @@ static void AplicarContextoSiCambia_NoLock(const ContextoTextoDetectado& ctx)
         Log(L"[CTX] focus class = " + (ctx.clase_focus.empty() ? std::wstring(L"(null)") : ctx.clase_focus));
     }
 
-    ULONGLONG ahora = GetTickCount64();
+    ULONGLONG ahora = PlataformaCIDActual()->NowMs();
     bool actividadReciente =
         (g_ultimo_input_escribible_tick != 0) &&
         ((ahora - g_ultimo_input_escribible_tick) <= VENTANA_ACTIVACION_MS);
@@ -623,6 +628,29 @@ static void CALLBACK TimerCallback(PVOID, BOOLEAN)
     LeaveCriticalSection(&g_cs);
 }
 
+
+static void OnEventoActividadEscribible(const EventBusCIDEvento& evento, void*)
+{
+    if (evento.tipo != EventBusCIDTipo::ActividadEscribible)
+        return;
+
+    if (!g_cs_iniciado || !g_iniciado)
+        return;
+
+    EnterCriticalSection(&g_cs);
+    if (g_ultimo_evento_actividad_tick != 0 &&
+        evento.timestamp_ms >= g_ultimo_evento_actividad_tick &&
+        (evento.timestamp_ms - g_ultimo_evento_actividad_tick) < DEDUPE_ACTIVIDAD_MS)
+    {
+        LeaveCriticalSection(&g_cs);
+        return;
+    }
+
+    g_ultimo_evento_actividad_tick = evento.timestamp_ms;
+    g_ultimo_input_escribible_tick = evento.timestamp_ms;
+    LeaveCriticalSection(&g_cs);
+}
+
 // CID-18-44 : Inicializa el panel de contexto, su temporizador y su estado base de detección.
 bool IniciarPanelContextoTexto()
 {
@@ -641,6 +669,7 @@ bool IniciarPanelContextoTexto()
     g_ultima_clase_log.clear();
     g_ultimo_origen_log.clear();
     g_ultimo_input_escribible_tick = 0;
+    g_ultimo_evento_actividad_tick = 0;
     g_tenemos_candidato = false;
     g_candidato = ContextoTextoDetectado{};
     g_candidato_tick = 0;
@@ -666,6 +695,7 @@ bool IniciarPanelContextoTexto()
     if (ok)
     {
         g_iniciado = true;
+        g_sub_actividad = SuscribirEventBusCID(EventBusCIDTipo::ActividadEscribible, OnEventoActividadEscribible, nullptr);
         ActualizarContexto_NoLock();
     }
 
@@ -701,6 +731,7 @@ void DetenerPanelContextoTexto()
         g_ultima_clase_log.clear();
         g_ultimo_origen_log.clear();
         g_ultimo_input_escribible_tick = 0;
+        g_ultimo_evento_actividad_tick = 0;
         g_tenemos_candidato = false;
         g_candidato = ContextoTextoDetectado{};
         g_candidato_tick = 0;
@@ -709,6 +740,12 @@ void DetenerPanelContextoTexto()
 
         DeleteCriticalSection(&g_cs);
         g_cs_iniciado = false;
+    }
+
+    if (g_sub_actividad != 0)
+    {
+        DesuscribirEventBusCID(g_sub_actividad);
+        g_sub_actividad = 0;
     }
 
     Superposicion_SetVisible(false);
@@ -731,7 +768,5 @@ void NotificarActividadEscribiblePanelContextoTexto()
     if (!g_cs_iniciado || !g_iniciado)
         return;
 
-    EnterCriticalSection(&g_cs);
-    g_ultimo_input_escribible_tick = GetTickCount64();
-    LeaveCriticalSection(&g_cs);
+    PublicarEventBusCID(EventBusCIDEvento{ EventBusCIDTipo::ActividadEscribible, PlataformaCIDActual()->NowMs(), L"panel-api" });
 }

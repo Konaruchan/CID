@@ -1,3 +1,16 @@
+## Actualización de convención CID (infraestructura nueva)
+
+Como parte del refactor del motor, se reservaron y documentaron nuevos identificadores para infraestructura interna:
+
+* CID-26 — `engine_context.cpp`
+* CID-27 — `engine_context.h`
+* CID-28 — `event_bus.cpp`
+* CID-29 — `event_bus.h`
+* CID-30 — `platform.h`
+* CID-31 — `platform_win32.cpp`
+
+Estos IDs siguen la misma regla `CID-XX-YY`: en cada archivo, `YY` inicia en `01` y se renumera de forma correlativa cuando se elimina o fusiona código.
+
 ## CID-22
 
 La referencia <a href="#cid-22">CID-22</a> corresponde al archivo <code>layout_teclado_visual.cpp</code>. Este archivo implementa el sistema de layout visual del teclado CID. Su responsabilidad principal es cargar el archivo JSON del layout visual, parsearlo con un parser mínimo propio, convertirlo en una colección de teclas renderizables y ofrecer utilidades para transformar esas teclas a píxeles o localizarlas por posición o por identificador CID.
@@ -1787,3 +1800,323 @@ declarar función para comprobar si una virtual key es marcadora de tilde
 * Usa `DWORD` incluido en <a href="#cid-25-02">CID-25-02</a>.
 * Se implementa en <a href="#cid-24-11">CID-24-11</a>, <a href="#cid-24-12">CID-24-12</a>, <a href="#cid-24-13">CID-24-13</a> y <a href="#cid-24-14">CID-24-14</a>.
 * Completa junto a <a href="#cid-25-03">CID-25-03</a> la interfaz pública total del mapa lógico CID.
+
+---
+
+## CID-26
+
+La referencia <a href="#cid-26">CID-26</a> corresponde al archivo <code>engine_context.cpp</code>. Este archivo implementa el punto único de acceso al contexto global del motor y sus accesores de subcontexto.
+
+### Índice interno de bloques
+
+* <a href="#cid-26-01">CID-26-01</a>
+
+---
+
+### <a id="cid-26-01"></a>CID-26-01
+
+**Qué hace:**
+Implementa el singleton `EngineContext` y los accesores `TCtx()`, `DCtx()` y `GCtx()`.
+
+**Cómo funciona:**
+Define un contexto estático de proceso que se inicializa bajo demanda, enlaza la plataforma activa por defecto y expone referencias directas a los subcontextos de teclado, detector y asentado.
+
+**Pseudocódigo:**
+
+```text id="cid2601"
+crear contexto estático del motor
+si no hay plataforma, enlazar backend activo
+devolver referencia al contexto
+devolver accesos a teclado, detector y asentado
+```
+
+**Relaciones:**
+
+* Se apoya en la interfaz declarada en <a href="#cid-27">CID-27</a>.
+* Usa la plataforma definida por <a href="#cid-30">CID-30</a> y su backend <a href="#cid-31">CID-31</a>.
+
+---
+
+## CID-27
+
+La referencia <a href="#cid-27">CID-27</a> corresponde al archivo <code>engine_context.h</code>. Este archivo declara la estructura de contexto unificado del motor y los tipos de subcontexto.
+
+### Índice interno de bloques
+
+* <a href="#cid-27-01">CID-27-01</a>
+
+---
+
+### <a id="cid-27-01"></a>CID-27-01
+
+**Qué hace:**
+Declara `EngineContext`, sus subcontextos (`TecladoContextCID`, `DetectorContextCID`, `GestorAsentadoContextCID`) y sus accesores públicos.
+
+**Cómo funciona:**
+Agrupa en una sola cabecera el estado compartido que antes vivía en variables globales sueltas y expone funciones de acceso por referencia para minimizar acoplamiento entre módulos.
+
+**Pseudocódigo:**
+
+```text id="cid2701"
+definir estructura de estado de teclado
+definir estructura de estado de detector
+definir estructura de estado de asentado
+definir estructura global del motor
+declarar accesores ContextoMotorCID, TCtx, DCtx y GCtx
+```
+
+**Relaciones:**
+
+* Es consumido por módulos operativos como <a href="#cid-02">CID-02</a>, <a href="#cid-04">CID-04</a> y <a href="#cid-08">CID-08</a>.
+* Su implementación se encuentra en <a href="#cid-26-01">CID-26-01</a>.
+
+---
+
+## CID-28
+
+La referencia <a href="#cid-28">CID-28</a> corresponde al archivo <code>event_bus.cpp</code>. Este archivo implementa el bus interno de eventos thread-safe.
+
+### Índice interno de bloques
+
+* <a href="#cid-28-01">CID-28-01</a>
+
+---
+
+### <a id="cid-28-01"></a>CID-28-01
+
+**Qué hace:**
+Implementa el ciclo de vida y operación del bus de eventos (`Iniciar`, `Detener`, `Suscribir`, `Desuscribir`, `Publicar`).
+
+**Cómo funciona:**
+Mantiene una lista de suscriptores protegida por `CRITICAL_SECTION`, genera IDs correlativos de suscripción y publica eventos usando snapshot para evitar invalidaciones durante callbacks.
+
+**Pseudocódigo:**
+
+```text id="cid2801"
+iniciar sección crítica y estado del bus
+registrar suscriptor con id único
+eliminar suscriptor por id
+tomar snapshot de suscriptores
+invocar callbacks coincidentes por tipo de evento
+```
+
+**Relaciones:**
+
+* Implementa la API declarada en <a href="#cid-29">CID-29</a>.
+* Es usado por módulos como <a href="#cid-02">CID-02</a>, <a href="#cid-04">CID-04</a> y <a href="#cid-18">CID-18</a>.
+
+---
+
+## CID-29
+
+La referencia <a href="#cid-29">CID-29</a> corresponde al archivo <code>event_bus.h</code>. Este archivo declara los tipos de evento y la API pública del bus interno.
+
+### Índice interno de bloques
+
+* <a href="#cid-29-01">CID-29-01</a>
+* <a href="#cid-29-02">CID-29-02</a>
+* <a href="#cid-29-03">CID-29-03</a>
+* <a href="#cid-29-04">CID-29-04</a>
+
+---
+
+### <a id="cid-29-01"></a>CID-29-01
+
+**Qué hace:**
+Declara la cabecera del módulo `EventBusCID`.
+
+**Cómo funciona:**
+Define include guard y dependencias básicas para que el bus pueda compartirse en todos los módulos del motor.
+
+**Pseudocódigo:**
+
+```text id="cid2901"
+proteger inclusión múltiple
+incluir tipos base necesarios
+```
+
+**Relaciones:**
+
+* Prepara los bloques <a href="#cid-29-02">CID-29-02</a> a <a href="#cid-29-04">CID-29-04</a>.
+
+---
+
+### <a id="cid-29-02"></a>CID-29-02
+
+**Qué hace:**
+Declara el enum de tipos de evento internos.
+
+**Cómo funciona:**
+Define los eventos de desacople que consumen y publican los módulos: actividad escribible, acorde reconocido y error de acorde.
+
+**Pseudocódigo:**
+
+```text id="cid2902"
+definir enum EventBusCIDTipo
+agregar ActividadEscribible
+agregar AcordeReconocido
+agregar ErrorAcorde
+```
+
+**Relaciones:**
+
+* Alimenta la estructura descrita en <a href="#cid-29-03">CID-29-03</a>.
+* Se usa en la API declarada en <a href="#cid-29-04">CID-29-04</a>.
+
+---
+
+### <a id="cid-29-03"></a>CID-29-03
+
+**Qué hace:**
+Declara la carga útil estándar de evento.
+
+**Cómo funciona:**
+Define estructura con tipo, timestamp y texto contextual, junto con alias de callback e identificador de suscripción.
+
+**Pseudocódigo:**
+
+```text id="cid2903"
+definir struct EventBusCIDEvento
+guardar tipo del evento
+guardar timestamp y texto opcional
+definir tipos callback e id de suscripción
+```
+
+**Relaciones:**
+
+* Es usado por las funciones de publicación y suscripción de <a href="#cid-29-04">CID-29-04</a>.
+
+---
+
+### <a id="cid-29-04"></a>CID-29-04
+
+**Qué hace:**
+Declara la API pública del bus.
+
+**Cómo funciona:**
+Expone funciones para controlar ciclo de vida del bus y registrar/desregistrar/publicar eventos entre módulos.
+
+**Pseudocódigo:**
+
+```text id="cid2904"
+declarar iniciar y detener bus
+declarar suscribir y desuscribir
+declarar publicar evento
+```
+
+**Relaciones:**
+
+* Se implementa en <a href="#cid-28-01">CID-28-01</a>.
+
+---
+
+## CID-30
+
+La referencia <a href="#cid-30">CID-30</a> corresponde al archivo <code>platform.h</code>. Este archivo declara la interfaz de abstracción de plataforma.
+
+### Índice interno de bloques
+
+* <a href="#cid-30-01">CID-30-01</a>
+* <a href="#cid-30-02">CID-30-02</a>
+* <a href="#cid-30-03">CID-30-03</a>
+
+---
+
+### <a id="cid-30-01"></a>CID-30-01
+
+**Qué hace:**
+Declara la cabecera de la capa de plataforma.
+
+**Cómo funciona:**
+Prepara las dependencias base para definir la interfaz de operaciones dependientes de sistema.
+
+**Pseudocódigo:**
+
+```text id="cid3001"
+proteger inclusión múltiple
+incluir tipos Windows y string
+```
+
+**Relaciones:**
+
+* Prepara <a href="#cid-30-02">CID-30-02</a> y <a href="#cid-30-03">CID-30-03</a>.
+
+---
+
+### <a id="cid-30-02"></a>CID-30-02
+
+**Qué hace:**
+Declara la interfaz `IPlatformCID`.
+
+**Cómo funciona:**
+Define los cuatro puntos de extensión de plataforma: tiempo actual, estado asíncrono de tecla, envío de eventos de input y envío de texto Unicode.
+
+**Pseudocódigo:**
+
+```text id="cid3002"
+definir interfaz abstracta IPlatformCID
+declarar NowMs
+declarar AsyncKeyState
+declarar SendInputEvents
+declarar SendUnicodeText
+```
+
+**Relaciones:**
+
+* La implementación Win32 se ubica en <a href="#cid-31">CID-31</a>.
+
+---
+
+### <a id="cid-30-03"></a>CID-30-03
+
+**Qué hace:**
+Declara acceso global a la plataforma activa.
+
+**Cómo funciona:**
+Expone getter y setter de backend, además de función de restablecimiento al backend Win32 por defecto.
+
+**Pseudocódigo:**
+
+```text id="cid3003"
+declarar obtener plataforma actual
+declarar establecer plataforma
+declarar restablecer backend por defecto
+```
+
+**Relaciones:**
+
+* Se implementa en <a href="#cid-31-01">CID-31-01</a>.
+
+---
+
+## CID-31
+
+La referencia <a href="#cid-31">CID-31</a> corresponde al archivo <code>platform_win32.cpp</code>. Este archivo implementa el backend Win32 de `IPlatformCID`.
+
+### Índice interno de bloques
+
+* <a href="#cid-31-01">CID-31-01</a>
+
+---
+
+### <a id="cid-31-01"></a>CID-31-01
+
+**Qué hace:**
+Implementa el backend Win32 concreto y el registro de plataforma activa.
+
+**Cómo funciona:**
+Define una clase final que traduce las operaciones abstractas a API Win32 (`GetTickCount64`, `GetAsyncKeyState`, `SendInput`) y mantiene un puntero global con opción de reemplazo/restauración.
+
+**Pseudocódigo:**
+
+```text id="cid3101"
+implementar clase PlatformCIDWin32
+mapear métodos abstractos a Win32
+crear instancia global por defecto
+exponer getter, setter y reset de backend
+```
+
+**Relaciones:**
+
+* Implementa la interfaz declarada en <a href="#cid-30-02">CID-30-02</a>.
+* Es consumido por <a href="#cid-26-01">CID-26-01</a>, <a href="#cid-02">CID-02</a>, <a href="#cid-04">CID-04</a>, <a href="#cid-08">CID-08</a> y <a href="#cid-20">CID-20</a>.
