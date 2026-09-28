@@ -1,4 +1,4 @@
-// CID-19-01 : Previene inclusiones múltiples de la interfaz pública del panel de contexto de texto.
+﻿// CID-19-01 : Previene inclusiones múltiples de la interfaz pública del panel de contexto de texto.
 #pragma once
 
 // CID-19-02 : Incluye los tipos base de Windows usados por la API del observador de contexto.

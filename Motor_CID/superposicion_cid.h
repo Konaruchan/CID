@@ -1,4 +1,4 @@
-// CID-13-01 : Previene inclusiones múltiples de la interfaz pública de la superposición CID.
+﻿// CID-13-01 : Previene inclusiones múltiples de la interfaz pública de la superposición CID.
 #pragma once
 
 // CID-13-02 : Incluye los tipos de texto usados por la interfaz pública del panel.

@@ -1,5 +1,6 @@
 ﻿// CID-31-01 : Implementación Win32 de la abstracción de plataforma del motor CID.
 #include "platform.h"
+#include "inyeccion_texto.h"
 
 #include <vector>
 
@@ -18,6 +19,8 @@ public:
 
     UINT SendInputEvents(UINT count, INPUT* events) const override
     {
+        for (UINT i = 0; i < count; ++i)
+            if (events[i].type == INPUT_KEYBOARD) events[i].ki.dwExtraInfo = MARCA_ENTRADA_CID;
         return SendInput(count, events, sizeof(INPUT));
     }
 

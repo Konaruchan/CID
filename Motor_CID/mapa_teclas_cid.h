@@ -1,10 +1,10 @@
-// CID-25-01 : Previene inclusiones múltiples de la interfaz pública del mapa lógico de teclas CID.
+ï»¿// CID-25-01 : Previene inclusiones mÃºltiples de la interfaz pÃºblica del mapa lÃ³gico de teclas CID.
 #pragma once
 
 // CID-25-02 : Incluye los tipos base de Windows usados por la compatibilidad heredada por virtual key.
 #include <windows.h>
 
-// CID-25-03 : Declara la validación y propiedades lógicas de teclas CID identificadas por nombre.
+// CID-25-03 : Declara la validaciÃ³n y propiedades lÃ³gicas de teclas CID identificadas por nombre.
 bool EsNombreTeclaCIDValido(const wchar_t* nombreCid);
 int OrdenTeclaCID_PorNombre(const wchar_t* nombreCid);
 bool EsMarcadoraTilde_PorNombre(const wchar_t* nombreCid);

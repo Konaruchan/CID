@@ -221,20 +221,7 @@ bool IniciarDetectorAcorde(int ventana_ms)
     DCtx().esperando_liberacion = false;
     DCtx().ultimo_pedal_principal_up = 0;
 
-    // CID-04-31 : Crea la cola de temporizadores del detector si todavía no existe.
-    if (!DCtx().timer_queue)
-        DCtx().timer_queue = CreateTimerQueue();
-
-    bool ok = (DCtx().timer_queue != nullptr);
-
     LeaveCriticalSection(&DCtx().cs);
-
-    // CID-04-32 : Informa del fallo de inicialización si no pudo crearse la cola de temporizadores.
-    if (!ok)
-    {
-        Log(L"ERROR: Detector de acorde no pudo crear TimerQueue.");
-        return false;
-    }
 
     // CID-04-33 : Registra el arranque correcto del detector y la ventana temporal configurada.
     Log(L"Detector de acorde iniciado (ventana " + std::to_wstring(DCtx().ventana_ms) + L" ms).");
@@ -244,19 +231,7 @@ bool IniciarDetectorAcorde(int ventana_ms)
 // CID-04-34 : Detiene el detector liberando temporizadores, cola de temporización y sincronización interna.
 void DetenerDetectorAcorde()
 {
-    // CID-04-35 : Elimina el temporizador activo si todavía existe dentro de la cola del detector.
-    if (DCtx().timer && DCtx().timer_queue)
-    {
-        (void)DeleteTimerQueueTimer(DCtx().timer_queue, DCtx().timer, INVALID_HANDLE_VALUE);
-        DCtx().timer = nullptr;
-    }
-
-    // CID-04-36 : Elimina la cola de temporizadores completa cuando el detector se apaga.
-    if (DCtx().timer_queue)
-    {
-        (void)DeleteTimerQueueEx(DCtx().timer_queue, INVALID_HANDLE_VALUE);
-        DCtx().timer_queue = nullptr;
-    }
+    ReiniciarDetectorAcorde();
 
     // CID-04-37 : Libera la sección crítica del detector si había sido inicializada previamente.
     if (DCtx().cs_iniciado)
@@ -267,9 +242,17 @@ void DetenerDetectorAcorde()
 }
 
 // CID-04-38 : Cierra la ventana temporal del acorde, resuelve su resultado y actualiza el estado del detector.
-static void CALLBACK TimerCallback(PVOID, BOOLEAN)
+static void CALLBACK TimerCallback(HWND, UINT, UINT_PTR id, DWORD)
 {
     EnterCriticalSection(&DCtx().cs);
+
+    if (!DCtx().ventana_activa || id != DCtx().timer)
+    {
+        LeaveCriticalSection(&DCtx().cs);
+        return;
+    }
+    KillTimer(nullptr, DCtx().timer);
+    DCtx().timer = 0;
 
     // CID-04-39 : Marca la ventana como cerrada y repesca las teclas físicas que sigan realmente pulsadas.
     DCtx().ventana_activa = false;
@@ -303,7 +286,7 @@ static void CALLBACK TimerCallback(PVOID, BOOLEAN)
                 {
                     AplicarModificadorD10_NoLock();
                     DCtx().esperando_liberacion = HayAlgunaTeclaPresionada_NoLock();
-                    DCtx().timer = nullptr;
+                    DCtx().timer = 0;
                     LeaveCriticalSection(&DCtx().cs);
                     return;
                 }
@@ -345,7 +328,7 @@ static void CALLBACK TimerCallback(PVOID, BOOLEAN)
 
     // CID-04-48 : Activa el bloqueo hasta liberar teclas y marca el temporizador como ya consumido.
     DCtx().esperando_liberacion = HayAlgunaTeclaPresionada_NoLock();
-    DCtx().timer = nullptr;
+    DCtx().timer = 0;
 
     LeaveCriticalSection(&DCtx().cs);
 }
@@ -358,8 +341,6 @@ void RecibirEventoTeclaCID(DWORD vk, DWORD scanCode, bool presionada)
     if (scanCode >= 256 && vk != VK_SPACE) return;
 
     // CID-04-51 : Ignora cualquier evento generado por la propia inyección de texto del sistema CID.
-    if (InyeccionActiva())
-        return;
 
     // CID-04-52 : Notifica actividad escribible al panel contextual al recibir una nueva pulsación física.
     if (presionada)
@@ -433,31 +414,12 @@ void RecibirEventoTeclaCID(DWORD vk, DWORD scanCode, bool presionada)
             LimpiarVentana_NoLock();
             DCtx().en_ventana[scanCode] = true;
 
-            if (DCtx().timer_queue)
+            DCtx().timer = SetTimer(nullptr, 0, DCtx().ventana_ms, TimerCallback);
+            if (!DCtx().timer)
             {
-                BOOL ok = CreateTimerQueueTimer(
-                    &DCtx().timer,
-                    DCtx().timer_queue,
-                    TimerCallback,
-                    nullptr,
-                    (DWORD)DCtx().ventana_ms,
-                    0,
-                    WT_EXECUTEDEFAULT
-                );
-
-                // CID-04-62 : Revierte la apertura de ventana si no pudo crearse el temporizador del acorde.
-                if (!ok)
-                {
-                    DCtx().ventana_activa = false;
-                    DCtx().timer = nullptr;
-                    Log(L"ERROR: No se pudo crear el timer de ventana de acorde.");
-                }
-            }
-            else
-            {
-                // CID-04-63 : Revierte la apertura de ventana si la cola de temporizadores no existe.
                 DCtx().ventana_activa = false;
-                Log(L"ERROR: TimerQueue no existe.");
+                LimpiarVentana_NoLock();
+                Superposicion_SetUltimoAsentado(L"No se pudo capturar el acorde. Vuelve a pulsarlo.");
             }
         }
         else
@@ -467,5 +429,20 @@ void RecibirEventoTeclaCID(DWORD vk, DWORD scanCode, bool presionada)
         }
     }
 
+    LeaveCriticalSection(&DCtx().cs);
+}
+
+// Solo se llama desde el hilo principal, antes de cambiar de modo o desmontar el detector.
+void ReiniciarDetectorAcorde()
+{
+    if (!DCtx().cs_iniciado) return;
+    EnterCriticalSection(&DCtx().cs);
+    if (DCtx().timer) KillTimer(nullptr, DCtx().timer);
+    DCtx().timer = 0;
+    DCtx().ventana_activa = false;
+    DCtx().esperando_liberacion = false;
+    DCtx().ultimo_pedal_principal_up = 0;
+    for (int i = 0; i < 256; ++i)
+        DCtx().presionada[i] = DCtx().en_ventana[i] = false;
     LeaveCriticalSection(&DCtx().cs);
 }

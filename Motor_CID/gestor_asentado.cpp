@@ -104,9 +104,9 @@ static wchar_t UltimoNoEspacio(const std::wstring& s)
 }
 
 // CID-08-14 : Inyecta una secuencia de retrocesos físicos para borrar texto previamente escrito.
-static void InyectarBackspace(int n)
+static bool InyectarBackspace(int n)
 {
-    if (n <= 0) return;
+    if (n <= 0) return true;
 
     std::vector<INPUT> inputs;
     inputs.reserve((size_t)n * 2);
@@ -126,7 +126,7 @@ static void InyectarBackspace(int n)
         inputs.push_back(up);
     }
 
-    PlataformaCIDActual()->SendInputEvents((UINT)inputs.size(), inputs.data());
+    return PlataformaCIDActual()->SendInputEvents((UINT)inputs.size(), inputs.data()) == inputs.size();
 }
 
 // CID-08-16 : Asienta la línea viva actual concatenando piezas, inyectando texto y cerrando la línea visual.
@@ -147,15 +147,25 @@ static void Asentar_NoLock()
         AplicarMayusculaInicial(palabra);
 
     // CID-08-19 : Guarda el último texto inyectado incluyendo el espacio final para permitir su borrado exacto.
-    GCtx().ultimo_inyectado = palabra + L" ";
+    const std::wstring texto = palabra + L" ";
 
     // CID-08-20 : Actualiza el estado textual visible de la superposición con la palabra asentada.
-    Superposicion_SetUltimoAsentado(palabra);
+
 
     // CID-08-21 : Inyecta el texto real en el sistema marcando temporalmente la inyección como propia.
     MarcarInyeccionActiva(true);
-    InyectarTextoUnicode(GCtx().ultimo_inyectado);
+    const bool enviado = InyectarTextoUnicode(texto);
     MarcarInyeccionActiva(false);
+    if (!enviado)
+    {
+        GCtx().fallo_inyeccion = true;
+        GCtx().ultimo_inyectado.clear();
+        Superposicion_SetUltimoAsentado(L"No se completó la escritura. Revisa el destino; pulsa Espacio para reintentar.");
+        return;
+    }
+    GCtx().fallo_inyeccion = false;
+    GCtx().ultimo_inyectado = texto;
+    Superposicion_SetUltimoAsentado(palabra);
 
     // CID-08-22 : Actualiza el contexto de mayúscula para la siguiente palabra según el signo final asentado.
     wchar_t last = UltimoNoEspacio(palabra);
@@ -172,9 +182,15 @@ static void Asentar_NoLock()
 }
 
 // CID-08-25 : Ejecuta el chequeo periódico de inactividad para disparar el auto-asentado cuando corresponda.
-static void CALLBACK TimerCallback(PVOID, BOOLEAN)
+static void CALLBACK TimerCallback(HWND, UINT, UINT_PTR id, DWORD)
 {
     EnterCriticalSection(&GCtx().cs);
+
+    if (id != GCtx().timer || GCtx().pausado || GCtx().fallo_inyeccion)
+    {
+        LeaveCriticalSection(&GCtx().cs);
+        return;
+    }
 
     // CID-08-26 : Sale sin hacer nada si no hay bitácora conectada sobre la que operar.
     if (!GCtx().bitacora)
@@ -202,7 +218,7 @@ static void CALLBACK TimerCallback(PVOID, BOOLEAN)
     ULONGLONG delta = (ahora >= GCtx().ultimo_tick) ? (ahora - GCtx().ultimo_tick) : 0;
 
     // CID-08-30 : Dispara el asentado automático cuando la inactividad supera el umbral dinámico actual.
-    if ((int)delta >= GCtx().auto_ms)
+    if (delta >= static_cast<ULONGLONG>(GCtx().auto_ms))
     {
         Asentar_NoLock();
         GCtx().ultimo_tick = ahora;
@@ -237,25 +253,11 @@ bool IniciarGestorAsentado(int auto_ms, BitacoraCID* bitacora)
 
     GCtx().promedio_ms = (double)ClampInt(GCtx().auto_ms - MARGEN_MS, 80, 500);
 
-    // CID-08-34 : Crea la cola de temporizadores del gestor si todavía no existe.
-    if (!GCtx().timer_queue)
-        GCtx().timer_queue = CreateTimerQueue();
-
-    bool ok = (GCtx().timer_queue != nullptr);
-
-    // CID-08-35 : Crea el temporizador periódico de chequeo solo si la cola existe y aún no había timer activo.
-    if (ok && !GCtx().timer)
-    {
-        ok = CreateTimerQueueTimer(
-            &GCtx().timer,
-            GCtx().timer_queue,
-            TimerCallback,
-            nullptr,
-            CHEQUEO_MS,
-            CHEQUEO_MS,
-            WT_EXECUTEDEFAULT
-        );
-    }
+    GCtx().pausado = false;
+    GCtx().fallo_inyeccion = false;
+    if (!GCtx().timer)
+        GCtx().timer = SetTimer(nullptr, 0, CHEQUEO_MS, TimerCallback);
+    const bool ok = GCtx().timer != 0;
 
     // CID-08-36 : Publica el estado visual inicial si el arranque fue correcto y hay bitácora conectada.
     if (ok && GCtx().bitacora)
@@ -278,19 +280,9 @@ bool IniciarGestorAsentado(int auto_ms, BitacoraCID* bitacora)
 // CID-08-39 : Detiene el gestor liberando temporizador, cola de temporización y sincronización global.
 void DetenerGestorAsentado()
 {
-    // CID-08-40 : Elimina el temporizador periódico si todavía existe dentro de la cola del gestor.
-    if (GCtx().timer && GCtx().timer_queue)
-    {
-        DeleteTimerQueueTimer(GCtx().timer_queue, GCtx().timer, INVALID_HANDLE_VALUE);
-        GCtx().timer = nullptr;
-    }
-
-    // CID-08-41 : Elimina la cola de temporizadores completa al apagar el gestor.
-    if (GCtx().timer_queue)
-    {
-        DeleteTimerQueueEx(GCtx().timer_queue, INVALID_HANDLE_VALUE);
-        GCtx().timer_queue = nullptr;
-    }
+    if (GCtx().timer) KillTimer(nullptr, GCtx().timer);
+    GCtx().timer = 0;
+    GCtx().bitacora = nullptr;
 
     // CID-08-42 : Libera la sección crítica global del gestor si había sido inicializada.
     if (GCtx().cs_iniciado)
@@ -381,8 +373,15 @@ void BorrarUltimoAsentado()
 
     // CID-08-51 : Borra físicamente del sistema el último asentado usando backspaces inyectados.
     MarcarInyeccionActiva(true);
-    InyectarBackspace(n);
+    const bool borrado = InyectarBackspace(n);
     MarcarInyeccionActiva(false);
+    if (!borrado)
+    {
+        GCtx().ultimo_inyectado.clear();
+        Superposicion_SetUltimoAsentado(L"No se completó el borrado. Revisa el texto de destino.");
+        LeaveCriticalSection(&GCtx().cs);
+        return;
+    }
 
     // CID-08-52 : Reabre visual y lógicamente la última línea asentada si existe bitácora conectada.
     if (GCtx().bitacora)
@@ -395,5 +394,18 @@ void BorrarUltimoAsentado()
     Superposicion_SetUltimoAsentado(L"(borrado)");
     GCtx().ultimo_inyectado.clear();
 
+    LeaveCriticalSection(&GCtx().cs);
+}
+
+void PausarGestorAsentado(bool pausa)
+{
+    if (!GCtx().cs_iniciado) return;
+    EnterCriticalSection(&GCtx().cs);
+    GCtx().pausado = pausa;
+    GCtx().pedal_abajo = false;
+    GCtx().ultimo_tick = PlataformaCIDActual()->NowMs();
+    GCtx().tick_anterior_ritmo = GCtx().ultimo_tick;
+    // Una edición QWERTY invalida el borrado exacto del último asentado.
+    GCtx().ultimo_inyectado.clear();
     LeaveCriticalSection(&GCtx().cs);
 }

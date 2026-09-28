@@ -1,4 +1,4 @@
-// CID-03-01 : Previene inclusiones múltiples de la interfaz pública del módulo de teclado CID.
+﻿// CID-03-01 : Previene inclusiones múltiples de la interfaz pública del módulo de teclado CID.
 #pragma once
 
 // CID-03-02 : Incluye los tipos base de Windows usados por la interfaz del módulo.

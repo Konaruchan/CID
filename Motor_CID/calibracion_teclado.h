@@ -1,4 +1,4 @@
-// CID-15-01 : Previene inclusiones múltiples de la interfaz pública de calibración del teclado CID.
+﻿// CID-15-01 : Previene inclusiones múltiples de la interfaz pública de calibración del teclado CID.
 #pragma once
 
 // CID-15-02 : Incluye los tipos base de Windows usados por la API pública de calibración.

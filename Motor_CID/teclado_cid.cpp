@@ -8,6 +8,8 @@
 #include "engine_context.h"
 #include "event_bus.h"
 #include "platform.h"
+#include "detector_acorde.h"
+#include "gestor_asentado.h"
 
 // CID-02-03 : Inclusión de cabeceras del sistema y utilidades de texto necesarias para el hook global.
 #include <windows.h>
@@ -195,7 +197,7 @@ static LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam)
     const DWORD scanCode = k->scanCode;
 
     // CID-02-22 : Nunca intercepta eventos generados por la propia inyección de texto del sistema CID.
-    if (InyeccionActiva())
+    if ((k->flags & LLKHF_INJECTED) && k->dwExtraInfo == MARCA_ENTRADA_CID)
         return CallNextHookEx(TCtx().hook, nCode, wParam, lParam);
 
     // CID-02-23 : Calcula el estado actual de modificadores del sistema para evitar interferir con atajos globales.
@@ -228,6 +230,11 @@ static LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam)
     // CID-02-27 : En modo CID deja pasar combinaciones con modificadores del sistema para no romper atajos ni accesos externos.
     if (hay_modificador_sistema)
     {
+        // Entregar la liberación de una tecla que CID ya consumió evita pedales atascados.
+        if (liberada && TCtx().callback &&
+            ((vk == VK_SPACE && TCtx().vk_abajo[VK_SPACE]) ||
+             (scanCode < 256 && TCtx().sc_abajo[scanCode])))
+            TCtx().callback(vk, scanCode, false);
         if (liberada && EsVkEnRangoByte(vk))
             TCtx().vk_abajo[vk] = false;
         if (liberada && EsScanCodeEnRangoByte(scanCode))
@@ -346,7 +353,7 @@ bool EstaModoCID()
 // CID-02-45 : Alterna entre modo CID y modo QWERTY y reinicia el estado interno del teclado.
 void AlternarModoCID()
 {
-    TCtx().modo_cid = !TCtx().modo_cid;
+    EstablecerModoCID(!TCtx().modo_cid);
     ReiniciarEstadosTeclas();
 
     Log(TCtx().modo_cid ? L"MODO CID: ON" : L"MODO CID: OFF (QWERTY)");
@@ -355,6 +362,8 @@ void AlternarModoCID()
 // CID-02-46 : Establece explícitamente el modo de funcionamiento del teclado y reinicia sus estados internos.
 void EstablecerModoCID(bool activo)
 {
+    ReiniciarDetectorAcorde();
+    PausarGestorAsentado(!activo);
     TCtx().modo_cid = activo;
     ReiniciarEstadosTeclas();
 

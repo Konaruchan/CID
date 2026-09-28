@@ -1,4 +1,4 @@
-// CID-17-01 : Previene inclusiones múltiples de la interfaz pública del asistente de setup del teclado CID.
+﻿// CID-17-01 : Previene inclusiones múltiples de la interfaz pública del asistente de setup del teclado CID.
 #pragma once
 
 // CID-17-02 : Incluye los tipos base de Windows usados por la API del asistente.

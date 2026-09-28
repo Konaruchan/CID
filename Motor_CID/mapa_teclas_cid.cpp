@@ -1,4 +1,4 @@
-// CID-24-01 : Inclusión de la implementación del mapa lógico y de compatibilidad de teclas CID.
+﻿// CID-24-01 : Inclusión de la implementación del mapa lógico y de compatibilidad de teclas CID.
 #include "mapa_teclas_cid.h"
 
 // CID-24-02 : Inclusión de utilidades de comparación de cadenas anchas para el mapa CID.
