@@ -228,7 +228,7 @@ bool IniciarDetectorAcorde(int ventana_ms)
     return true;
 }
 
-// CID-04-34 : Detiene el detector liberando temporizadores, cola de temporización y sincronización interna.
+// CID-04-34 : Detiene el detector liberando el temporizador de ventana y su sincronización interna.
 void DetenerDetectorAcorde()
 {
     ReiniciarDetectorAcorde();
@@ -244,6 +244,7 @@ void DetenerDetectorAcorde()
 // CID-04-38 : Cierra la ventana temporal del acorde, resuelve su resultado y actualiza el estado del detector.
 static void CALLBACK TimerCallback(HWND, UINT, UINT_PTR id, DWORD)
 {
+    if (!DCtx().cs_iniciado) return;
     EnterCriticalSection(&DCtx().cs);
 
     if (!DCtx().ventana_activa || id != DCtx().timer)
@@ -340,7 +341,7 @@ void RecibirEventoTeclaCID(DWORD vk, DWORD scanCode, bool presionada)
     if (!DCtx().cs_iniciado) return;
     if (scanCode >= 256 && vk != VK_SPACE) return;
 
-    // CID-04-51 : Ignora cualquier evento generado por la propia inyección de texto del sistema CID.
+    // CID-04-51 : La entrada propia ya fue descartada por su marca individual en el hook.
 
     // CID-04-52 : Notifica actividad escribible al panel contextual al recibir una nueva pulsación física.
     if (presionada)

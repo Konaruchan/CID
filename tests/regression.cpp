@@ -112,7 +112,9 @@ int wmain(int argc, wchar_t** argv)
         {
             RecibirEventoTeclaCID('3', 4, true);
             RecibirEventoTeclaCID('3', 4, false);
-            Bombear(60);
+            // Windows no garantiza el despacho de WM_TIMER en 60 ms bajo carga.
+            const auto limite = GetTickCount64() + 2000;
+            while (DCtx().timer != 0 && GetTickCount64() < limite) Bombear(10);
             Verificar(DCtx().timer == 0 && !DCtx().ventana_activa, "temporizador no liberado");
         }
         RecibirEventoTeclaCID('3', 4, true);
@@ -122,6 +124,7 @@ int wmain(int argc, wchar_t** argv)
         Verificar(bitacora.Tamano() == pendientes && DCtx().timer == 0, "acorde diferido tras pausa");
         DetenerDetectorAcorde();
         DetenerDetectorAcorde();
+        Bombear(80);
         Verificar(GuardarCalibracionTeclado((temp / L"calibracion.json").wstring(), &error), "guardar calibracion");
         Verificar(CargarCalibracionTeclado((temp / L"calibracion.json").wstring(), &error), "leer calibracion guardada");
         Verificar(!GuardarCalibracionTeclado((temp / L"no-existe" / L"calibracion.json").wstring(), &error), "guardado fallido informa exito");

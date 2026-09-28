@@ -31,8 +31,9 @@ class BandejaCID
             AppendMenuW(menu, MF_STRING, 2, L"Ayuda y atajos");
             AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
             AppendMenuW(menu, MF_STRING, 3, L"Salir de CID");
-            ReiniciarDetectorAcorde();
-            PausarGestorAsentado(true);
+            const HWND destino = GetForegroundWindow();
+            bool reactivar = EstaModoCID();
+            EstablecerModoCID(false);
             POINT punto{};
             GetCursorPos(&punto);
             SetForegroundWindow(hwnd);
@@ -42,10 +43,8 @@ class BandejaCID
             PostMessageW(hwnd, WM_NULL, 0, 0);
             if (comando == 1)
             {
-                AlternarModoCID();
-                Superposicion_SetModoQwerty(!EstaModoCID());
-                Superposicion_SetUltimoAsentado(EstaModoCID() ? L"MODO: CID" : L"MODO: QWERTY (pausado)");
-                self->Actualizar();
+                reactivar = !reactivar;
+
             }
             if (comando == 2)
             {
@@ -62,7 +61,14 @@ class BandejaCID
                     L"Ayuda de CID", MB_OK | MB_ICONINFORMATION);
             }
             if (comando == 3) PostQuitMessage(0);
-            else PausarGestorAsentado(!EstaModoCID());
+            else
+            {
+                if (IsWindow(destino)) SetForegroundWindow(destino);
+                EstablecerModoCID(reactivar);
+                Superposicion_SetModoQwerty(!reactivar);
+                Superposicion_SetUltimoAsentado(reactivar ? L"MODO: CID" : L"MODO: QWERTY (pausado)");
+                self->Actualizar();
+            }
             return 0;
         }
         if (msg == WM_CLOSE) { PostQuitMessage(0); return 0; }

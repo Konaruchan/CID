@@ -149,8 +149,7 @@ static void Asentar_NoLock()
     // CID-08-19 : Guarda el último texto inyectado incluyendo el espacio final para permitir su borrado exacto.
     const std::wstring texto = palabra + L" ";
 
-    // CID-08-20 : Actualiza el estado textual visible de la superposición con la palabra asentada.
-
+    // CID-08-20 : La superposición se confirma solo después de una inyección completa.
 
     // CID-08-21 : Inyecta el texto real en el sistema marcando temporalmente la inyección como propia.
     MarcarInyeccionActiva(true);
@@ -184,6 +183,7 @@ static void Asentar_NoLock()
 // CID-08-25 : Ejecuta el chequeo periódico de inactividad para disparar el auto-asentado cuando corresponda.
 static void CALLBACK TimerCallback(HWND, UINT, UINT_PTR id, DWORD)
 {
+    if (!GCtx().cs_iniciado) return;
     EnterCriticalSection(&GCtx().cs);
 
     if (id != GCtx().timer || GCtx().pausado || GCtx().fallo_inyeccion)
@@ -277,7 +277,7 @@ bool IniciarGestorAsentado(int auto_ms, BitacoraCID* bitacora)
     return true;
 }
 
-// CID-08-39 : Detiene el gestor liberando temporizador, cola de temporización y sincronización global.
+// CID-08-39 : Detiene el gestor liberando el temporizador de ventana y su sincronización global.
 void DetenerGestorAsentado()
 {
     if (GCtx().timer) KillTimer(nullptr, GCtx().timer);
