@@ -15,6 +15,7 @@
 #include "panel_contexto_texto.h"
 #include "event_bus.h"
 #include "platform.h"
+#include "bandeja_cid.h"
 
 // CID-01-03 : Identificadores de hotkeys globales para salir del motor y alternar el modo CID.
 static const int HOTKEY_SALIR_ID = 1;
@@ -40,10 +41,10 @@ static bool ExisteArchivo(const std::wstring& ruta)
 // CID-01-07 : Obtiene el directorio donde se encuentra el ejecutable actual del motor.
 static std::wstring DirectorioExe()
 {
-    wchar_t exePath[MAX_PATH]{};
-    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
-
-    std::wstring p = exePath;
+    std::vector<wchar_t> exePath(32768);
+    const DWORD longitud = GetModuleFileNameW(nullptr, exePath.data(), static_cast<DWORD>(exePath.size()));
+    if (longitud == 0 || longitud >= exePath.size()) return L"";
+    std::wstring p(exePath.data(), longitud);
     size_t pos = p.find_last_of(L"\\/");
     if (pos != std::wstring::npos) p = p.substr(0, pos);
     return p;
@@ -153,13 +154,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
 
     // CID-01-16 : Registra la hotkey global de salida y avisa si no se puede reservar.
     bool hotkey_salir_ok =
-        RegisterHotKey(nullptr, HOTKEY_SALIR_ID, MOD_CONTROL | MOD_SHIFT, VK_F9) != 0;
+        RegisterHotKey(nullptr, HOTKEY_SALIR_ID, MOD_CONTROL | MOD_SHIFT | MOD_NOREPEAT, VK_F9) != 0;
     if (!hotkey_salir_ok)
         Log(L"ADVERTENCIA: no se pudo registrar Ctrl+Shift+F9. Se continuará sin hotkey de salida.");
 
     // CID-01-17 : Registra la hotkey global de cambio de modo y avisa si no se puede reservar.
     bool hotkey_toggle_ok =
-        RegisterHotKey(nullptr, HOTKEY_TOGGLE_CID_ID, MOD_CONTROL | MOD_SHIFT, VK_F11) != 0;
+        RegisterHotKey(nullptr, HOTKEY_TOGGLE_CID_ID, MOD_CONTROL | MOD_SHIFT | MOD_NOREPEAT, VK_F11) != 0;
     if (!hotkey_toggle_ok)
         Log(L"ADVERTENCIA: no se pudo registrar Ctrl+Shift+F11. Se continuará sin hotkey de cambio de modo.");
 
@@ -317,11 +318,22 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
         return 1;
     }
 
+    BandejaCID bandeja;
+    if (!bandeja.Iniciar(hInstance))
+    {
+        MessageBoxW(nullptr, L"No se pudo crear el menú de CID junto al reloj. El motor se cerrará; vuelve a abrirlo.", L"Motor CID", MB_OK | MB_ICONERROR);
+        LimpiezaFatal(hotkey_salir_ok, hotkey_toggle_ok, mutex_instancia);
+        return 1;
+    }
+    if (!hotkey_salir_ok || !hotkey_toggle_ok)
+        MessageBoxW(nullptr, L"Otro programa está usando alguno de los atajos de CID. Puedes pausar o cerrar CID desde su icono junto al reloj.", L"Atajo no disponible", MB_OK | MB_ICONINFORMATION);
+
     // CID-01-38 : Declara la estructura de mensajes usada por el bucle principal de Windows.
-    MSG msg;
+    MSG msg{};
+    BOOL resultadoMensaje = 0;
 
     // CID-01-39 : Mantiene el bucle de mensajes del proceso mientras el sistema siga activo.
-    while (GetMessageW(&msg, nullptr, 0, 0) > 0)
+    while ((resultadoMensaje = GetMessageW(&msg, nullptr, 0, 0)) > 0)
     {
         // CID-01-40 : Filtra y procesa las hotkeys globales registradas por el motor.
         if (msg.message == WM_HOTKEY)
@@ -337,6 +349,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
             if (hotkey_toggle_ok && msg.wParam == HOTKEY_TOGGLE_CID_ID)
             {
                 AlternarModoCID();
+                bandeja.Actualizar();
                 Superposicion_SetUltimoAsentado(EstaModoCID() ? L"MODO: CID" : L"MODO: QWERTY");
                 Superposicion_SetModoQwerty(!EstaModoCID());
                 continue;
@@ -366,5 +379,5 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
 
     // CID-01-47 : Registra el cierre normal del motor y devuelve código de salida correcto.
     Log(L"Motor CID terminado.");
-    return 0;
+    return resultadoMensaje == -1 ? 1 : 0;
 }

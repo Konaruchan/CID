@@ -1,4 +1,4 @@
-// CID-07-01 : Previene inclusiones múltiples de la interfaz pública de la bitácora CID.
+﻿// CID-07-01 : Previene inclusiones múltiples de la interfaz pública de la bitácora CID.
 #pragma once
 
 // CID-07-02 : Incluye los tipos base del sistema usados por la sincronización interna de la bitácora.
@@ -42,6 +42,8 @@ public:
     // CID-07-09 : Declara la construcción y destrucción segura de la bitácora con sincronización interna.
     BitacoraCID();
     ~BitacoraCID();
+    BitacoraCID(const BitacoraCID&) = delete;
+    BitacoraCID& operator=(const BitacoraCID&) = delete;
 
     // CID-07-10 : Declara la configuración de límites para entradas lógicas y líneas visuales.
     void ConfigurarMaximo(size_t max);

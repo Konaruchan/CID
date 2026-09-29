@@ -1,4 +1,4 @@
-// CID-05-01 : Previene inclusiones múltiples de la interfaz pública del detector de acordes CID.
+﻿// CID-05-01 : Previene inclusiones múltiples de la interfaz pública del detector de acordes CID.
 #pragma once
 
 // CID-05-02 : Incluye los tipos base de Windows usados por la interfaz del detector.
@@ -18,3 +18,4 @@ void ConectarDiccionario(const DiccionarioCID* dic);
 
 // CID-05-06 : Declara la recepción de eventos de teclado ya filtrados desde el módulo teclado_cid.
 void RecibirEventoTeclaCID(DWORD vk, DWORD scanCode, bool presionada);
+void ReiniciarDetectorAcorde();

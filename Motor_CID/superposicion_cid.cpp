@@ -1,44 +1,44 @@
-// CID-12-01 : InclusiÛn de la implementaciÛn de la superposiciÛn visual del sistema CID.
+Ôªø// CID-12-01 : Inclusi√≥n de la implementaci√≥n de la superposici√≥n visual del sistema CID.
 #include "superposicion_cid.h"
 
-// CID-12-02 : InclusiÛn de cabeceras del sistema y utilidades de texto, contenedores y caracteres.
+// CID-12-02 : Inclusi√≥n de cabeceras del sistema y utilidades de texto, contenedores y caracteres.
 #include <windows.h>
 #include <string>
 #include <vector>
 #include <cwctype>
 
-// CID-12-03 : Estado global de la ventana principal de la superposiciÛn CID.
+// CID-12-03 : Estado global de la ventana principal de la superposici√≥n CID.
 static HWND g_hwnd = nullptr;
 
-// CID-12-04 : Estado global de sincronizaciÛn para proteger acceso concurrente a la superposiciÛn.
+// CID-12-04 : Estado global de sincronizaci√≥n para proteger acceso concurrente a la superposici√≥n.
 static CRITICAL_SECTION g_cs;
 static bool g_cs_iniciado = false;
 
-// CID-12-05 : Estado textual legado de bit·cora y ˙ltima lÌnea asentada mostrada en el pie del panel.
+// CID-12-05 : Estado textual legado de bit√°cora y √∫ltima l√≠nea asentada mostrada en el pie del panel.
 static std::wstring g_linea_bitacora;
 static std::wstring g_linea_asentado;
 
-// CID-12-06 : Estado visual autoritativo de la bit·cora y bandera de modo visual moderno.
+// CID-12-06 : Estado visual autoritativo de la bit√°cora y bandera de modo visual moderno.
 static EstadoVisualBitacoraCID g_estado_visual;
 static bool g_modo_visual_autoritativo = false;
 
-// CID-12-07 : Estado temporal del efecto visual de error de acorde y su duraciÛn configurada.
+// CID-12-07 : Estado temporal del efecto visual de error de acorde y su duraci√≥n configurada.
 static ULONGLONG g_error_hasta_tick = 0;
 static const ULONGLONG ERROR_MS = 160;
 
-// CID-12-08 : Recursos tipogr·ficos usados por el panel principal y la lÌnea de informaciÛn.
+// CID-12-08 : Recursos tipogr√°ficos usados por el panel principal y la l√≠nea de informaci√≥n.
 static HFONT g_font_tokens = nullptr;
 static HFONT g_font_info = nullptr;
 
-// CID-12-09 : Identidad de clase de ventana y temporizador interno de animaciÛn visual.
+// CID-12-09 : Identidad de clase de ventana y temporizador interno de animaci√≥n visual.
 static const wchar_t* CLASE = L"SUPERPOSICION_CID_PANEL";
 static const UINT ID_TIMER_ANIM = 1;
 
-// CID-12-10 : Mensajes internos que fuerzan layout e invalidaciÛn siempre en el hilo de la ventana.
+// CID-12-10 : Mensajes internos que fuerzan layout e invalidaci√≥n siempre en el hilo de la ventana.
 static const UINT WM_CID_APLICAR_LAYOUT = WM_APP + 101;
 static const UINT WM_CID_INVALIDAR = WM_APP + 102;
 
-// CID-12-11 : Dimensiones y posiciÛn base del panel grande de modo CID.
+// CID-12-11 : Dimensiones y posici√≥n base del panel grande de modo CID.
 static const int PANEL_DEFAULT_X = 24;
 static const int PANEL_DEFAULT_Y = 24;
 static const int PANEL_W = 392;
@@ -48,15 +48,15 @@ static const int PANEL_H = 214;
 static const int PANEL_QWERTY_W = 132;
 static const int PANEL_QWERTY_H = 28;
 
-// CID-12-13 : M·rgenes de pantalla y separaciÛn visual respecto al rect·ngulo de anclaje.
+// CID-12-13 : M√°rgenes de pantalla y separaci√≥n visual respecto al rect√°ngulo de anclaje.
 static const int PANEL_MARGEN_PANTALLA = 8;
 static const int PANEL_SEPARACION_ANCLAJE = 8;
 
-// CID-12-14 : LÌmites de historial visual y n˙mero de lÌneas visibles simult·neamente en pantalla.
+// CID-12-14 : L√≠mites de historial visual y n√∫mero de l√≠neas visibles simult√°neamente en pantalla.
 static const int MAX_LINEAS_CERRADAS_UI = 24;
 static const int LINEAS_VISIBLES = 5;
 
-// CID-12-15 : Estado deseado de visibilidad, anclaje y modo QWERTY de la superposiciÛn.
+// CID-12-15 : Estado deseado de visibilidad, anclaje y modo QWERTY de la superposici√≥n.
 static bool g_visible_deseado = false;
 static bool g_tiene_rect_anclaje = false;
 static RECT g_rect_anclaje{ 0,0,0,0 };
@@ -79,7 +79,7 @@ static COLORREF LerpColor(COLORREF a, COLORREF b, int t, int den)
     );
 }
 
-// CID-12-18 : Convierte una cadena completa a may˙sculas para su representaciÛn visual en el panel.
+// CID-12-18 : Convierte una cadena completa a may√∫sculas para su representaci√≥n visual en el panel.
 static std::wstring A_Mayusculas(const std::wstring& s)
 {
     std::wstring out = s;
@@ -94,33 +94,33 @@ static bool ErrorVisualActivo_NoLock()
     return GetTickCount64() < g_error_hasta_tick;
 }
 
-// CID-12-20 : Comprueba si un rect·ngulo tiene dimensiones positivas utilizables.
+// CID-12-20 : Comprueba si un rect√°ngulo tiene dimensiones positivas utilizables.
 static bool RectValido(const RECT& rc)
 {
     return (rc.right > rc.left) && (rc.bottom > rc.top);
 }
 
-// CID-12-21 : HeurÌstica para detectar si un rect·ngulo de anclaje parece representar un caret de texto.
+// CID-12-21 : Heur√≠stica para detectar si un rect√°ngulo de anclaje parece representar un caret de texto.
 static bool PareceCaret(const RECT& rc)
 {
     return RectValido(rc) && ((rc.right - rc.left) <= 10);
 }
 
-// CID-12-22 : Solicita repintado asÌncrono de la ventana de superposiciÛn en su propio hilo.
+// CID-12-22 : Solicita repintado as√≠ncrono de la ventana de superposici√≥n en su propio hilo.
 static void SolicitarInvalidar()
 {
     if (g_hwnd)
         PostMessageW(g_hwnd, WM_CID_INVALIDAR, 0, 0);
 }
 
-// CID-12-23 : Solicita rec·lculo asÌncrono de layout y posiciÛn de la superposiciÛn en su propio hilo.
+// CID-12-23 : Solicita rec√°lculo as√≠ncrono de layout y posici√≥n de la superposici√≥n en su propio hilo.
 static void SolicitarAplicarLayout()
 {
     if (g_hwnd)
         PostMessageW(g_hwnd, WM_CID_APLICAR_LAYOUT, 0, 0);
 }
 
-// CID-12-24 : Recorta el historial visual cerrado a un m·ximo seguro para la interfaz.
+// CID-12-24 : Recorta el historial visual cerrado a un m√°ximo seguro para la interfaz.
 static void LimitarLineasCerradasUI_NoLock()
 {
     if (g_estado_visual.lineas_cerradas.size() > MAX_LINEAS_CERRADAS_UI)
@@ -133,7 +133,7 @@ static void LimitarLineasCerradasUI_NoLock()
     }
 }
 
-// CID-12-25 : Convierte la bit·cora textual antigua entre corchetes en tokens visuales b·sicos de piezas.
+// CID-12-25 : Convierte la bit√°cora textual antigua entre corchetes en tokens visuales b√°sicos de piezas.
 static std::vector<TokenVisualCID> ParsearTokensLegacy(const std::wstring& texto)
 {
     std::vector<TokenVisualCID> out;
@@ -176,7 +176,7 @@ static std::vector<TokenVisualCID> ParsearTokensLegacy(const std::wstring& texto
     return out;
 }
 
-// CID-12-26 : Traduce la bit·cora textual heredada al estado visual interno mientras no exista modo autoritativo.
+// CID-12-26 : Traduce la bit√°cora textual heredada al estado visual interno mientras no exista modo autoritativo.
 static void AplicarBitacoraLegacyAlEstadoVisual_NoLock(const std::wstring& texto)
 {
     if (g_modo_visual_autoritativo)
@@ -198,7 +198,7 @@ static void AplicarBitacoraLegacyAlEstadoVisual_NoLock(const std::wstring& texto
     g_estado_visual.linea_actual.tokens = tokens;
 }
 
-// CID-12-27 : Construye las filas visibles finales combinando lÌneas cerradas recientes y lÌnea actual.
+// CID-12-27 : Construye las filas visibles finales combinando l√≠neas cerradas recientes y l√≠nea actual.
 static void ConstruirFilasVisibles(
     const EstadoVisualBitacoraCID& estado,
     std::vector<LineaVisualCID>& filas_out,
@@ -224,7 +224,7 @@ static void ConstruirFilasVisibles(
     indice_activa_out = (int)filas_out.size() - 1;
 }
 
-// CID-12-28 : Aplica visibilidad, tamaÒo y posiciÛn de la ventana seg˙n modo, anclaje y monitor activo.
+// CID-12-28 : Aplica visibilidad, tama√±o y posici√≥n de la ventana seg√∫n modo, anclaje y monitor activo.
 static void AplicarVisibilidadYPosicion_NoLock()
 {
     if (!g_hwnd)
@@ -245,7 +245,7 @@ static void AplicarVisibilidadYPosicion_NoLock()
     RECT rcTrabajo{};
     bool tieneMonitor = false;
 
-    // CID-12-29 : Si existe rect·ngulo de anclaje v·lido, calcula la mejor posiciÛn relativa al caret o control.
+    // CID-12-29 : Si existe rect√°ngulo de anclaje v√°lido, calcula la mejor posici√≥n relativa al caret o control.
     if (g_tiene_rect_anclaje && RectValido(g_rect_anclaje))
     {
         HMONITOR mon = MonitorFromRect(&g_rect_anclaje, MONITOR_DEFAULTTONEAREST);
@@ -301,7 +301,7 @@ static void AplicarVisibilidadYPosicion_NoLock()
     );
 }
 
-// CID-12-30 : Rellena un rect·ngulo completo con un color sÛlido.
+// CID-12-30 : Rellena un rect√°ngulo completo con un color s√≥lido.
 static void RellenarRect(HDC hdc, const RECT& rc, COLORREF color)
 {
     HBRUSH br = CreateSolidBrush(color);
@@ -309,7 +309,7 @@ static void RellenarRect(HDC hdc, const RECT& rc, COLORREF color)
     DeleteObject(br);
 }
 
-// CID-12-31 : Dibuja el borde de un rect·ngulo usando un color de lÌnea simple.
+// CID-12-31 : Dibuja el borde de un rect√°ngulo usando un color de l√≠nea simple.
 static void DibujarRectBorde(HDC hdc, const RECT& rc, COLORREF borde)
 {
     HPEN pen = CreatePen(PS_SOLID, 1, borde);
@@ -323,7 +323,7 @@ static void DibujarRectBorde(HDC hdc, const RECT& rc, COLORREF borde)
     DeleteObject(pen);
 }
 
-// CID-12-32 : Dibuja un degradado vertical por lÌneas interpolando entre tres colores.
+// CID-12-32 : Dibuja un degradado vertical por l√≠neas interpolando entre tres colores.
 static void DibujarDegradadoVertical(HDC hdc, const RECT& rc, COLORREF top, COLORREF mid, COLORREF bottom)
 {
     int h = rc.bottom - rc.top;
@@ -351,7 +351,7 @@ static void DibujarDegradadoVertical(HDC hdc, const RECT& rc, COLORREF top, COLO
     }
 }
 
-// CID-12-33 : Dibuja una fila del panel con estilo distinto seg˙n estÈ activa o alternada.
+// CID-12-33 : Dibuja una fila del panel con estilo distinto seg√∫n est√© activa o alternada.
 static void DibujarFila(HDC hdc, const RECT& rc, bool activa, bool alterna)
 {
     COLORREF top, mid, bottom, borde;
@@ -388,7 +388,7 @@ static void DibujarFila(HDC hdc, const RECT& rc, bool activa, bool alterna)
     DeleteObject(pen);
 }
 
-// CID-12-34 : Devuelve el ancho aproximado de un car·cter monoespaciado para c·lculos de wrapping.
+// CID-12-34 : Devuelve el ancho aproximado de un car√°cter monoespaciado para c√°lculos de wrapping.
 static int AnchoCaracterMono(HDC hdc)
 {
     SIZE sz{};
@@ -396,7 +396,7 @@ static int AnchoCaracterMono(HDC hdc)
     return (sz.cx > 0) ? sz.cx : 8;
 }
 
-// CID-12-35 : Parte un token largo en varias lÌneas cuando no contiene espacios y supera el ancho ˙til.
+// CID-12-35 : Parte un token largo en varias l√≠neas cuando no contiene espacios y supera el ancho √∫til.
 static std::wstring PartirTokenLargo(const std::wstring& texto, int maxCharsPorLinea)
 {
     if (maxCharsPorLinea < 4)
@@ -461,7 +461,7 @@ static void DibujarTextoCajaCentradoWrap(HDC hdc, RECT rcCaja, const std::wstrin
     );
 }
 
-// CID-12-37 : Dibuja los tokens de una lÌnea distribuyÈndolos de forma equilibrada dentro de su fila.
+// CID-12-37 : Dibuja los tokens de una l√≠nea distribuy√©ndolos de forma equilibrada dentro de su fila.
 static void DibujarTokensLinea(HDC hdc, const RECT& rc, const LineaVisualCID& linea)
 {
     const int n = (int)linea.tokens.size();
@@ -475,7 +475,7 @@ static void DibujarTokensLinea(HDC hdc, const RECT& rc, const LineaVisualCID& li
     int top = rc.top + 2;
     int bottom = rc.bottom - 2;
 
-    // CID-12-38 : Caso especial para una sola pieza ocupando visualmente todo el ancho ˙til de la fila.
+    // CID-12-38 : Caso especial para una sola pieza ocupando visualmente todo el ancho √∫til de la fila.
     if (n == 1)
     {
         RECT rcSolo{ left, top, right, bottom };
@@ -546,7 +546,7 @@ static void DibujarEsquinasError(HDC hdc, const RECT& rc)
     DeleteObject(pen);
 }
 
-// CID-12-41 : Procedimiento de ventana principal que procesa entrada, temporizaciÛn, layout y repintado.
+// CID-12-41 : Procedimiento de ventana principal que procesa entrada, temporizaci√≥n, layout y repintado.
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg)
@@ -557,7 +557,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_ERASEBKGND:
         return 1;
 
-        // CID-12-42 : Aplica layout y posiciÛn solicitados de forma segura en el hilo de la ventana.
+        // CID-12-42 : Aplica layout y posici√≥n solicitados de forma segura en el hilo de la ventana.
     case WM_CID_APLICAR_LAYOUT:
     {
         if (g_cs_iniciado)
@@ -574,7 +574,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         InvalidateRect(hwnd, nullptr, TRUE);
         return 0;
 
-        // CID-12-44 : Anima repintados periÛdicos solo mientras siga vivo el efecto visual de error.
+        // CID-12-44 : Anima repintados peri√≥dicos solo mientras siga vivo el efecto visual de error.
     case WM_TIMER:
         if (wParam == ID_TIMER_ANIM)
         {
@@ -613,7 +613,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         bool errorActivo = false;
         bool modoQwerty = false;
 
-        // CID-12-46 : Captura una instant·nea local del estado protegido antes de dibujar.
+        // CID-12-46 : Captura una instant√°nea local del estado protegido antes de dibujar.
         EnterCriticalSection(&g_cs);
         estado = g_estado_visual;
         asentado = g_linea_asentado;
@@ -639,7 +639,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             rcClient.bottom - 6
         };
 
-        // CID-12-47 : Dibuja el panel compacto de modo QWERTY cuando ese modo est· activo.
+        // CID-12-47 : Dibuja el panel compacto de modo QWERTY cuando ese modo est√° activo.
         if (modoQwerty)
         {
             RECT rcSombra = rcPanel;
@@ -713,7 +713,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
         HGDIOBJ oldFont = SelectObject(hdc, g_font_tokens);
 
-        // CID-12-49 : Dibuja cada fila visible del historial y la lÌnea activa con sus tokens.
+        // CID-12-49 : Dibuja cada fila visible del historial y la l√≠nea activa con sus tokens.
         for (int i = 0; i < LINEAS_VISIBLES; ++i)
         {
             RECT rcFila{
@@ -734,7 +734,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
         SelectObject(hdc, oldFont);
 
-        // CID-12-50 : Dibuja la lÌnea divisoria y el texto informativo del ˙ltimo asentado en el pie.
+        // CID-12-50 : Dibuja la l√≠nea divisoria y el texto informativo del √∫ltimo asentado en el pie.
         HPEN penFooter = CreatePen(PS_SOLID, 1, RGB(208, 214, 221));
         HGDIOBJ oldPen = SelectObject(hdc, penFooter);
         MoveToEx(hdc, rcFooter.left, rcFooter.top, nullptr);
@@ -762,7 +762,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
         SelectObject(hdc, oldFont);
 
-        // CID-12-51 : Dibuja el adorno de error visual sobre el panel cuando el estado de error est· activo.
+        // CID-12-51 : Dibuja el adorno de error visual sobre el panel cuando el estado de error est√° activo.
         if (errorActivo)
             DibujarEsquinasError(hdc, rcPanel);
 
@@ -787,7 +787,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     }
 }
 
-// CID-12-53 : Inicializa la clase de ventana, recursos gr·ficos y estado base de la superposiciÛn CID.
+// CID-12-53 : Inicializa la clase de ventana, recursos gr√°ficos y estado base de la superposici√≥n CID.
 bool IniciarSuperposicionCID(HINSTANCE hInst)
 {
     if (!g_cs_iniciado)
@@ -796,7 +796,7 @@ bool IniciarSuperposicionCID(HINSTANCE hInst)
         g_cs_iniciado = true;
     }
 
-    // CID-12-54 : Construye las dos fuentes usadas por el panel para tokens e informaciÛn secundaria.
+    // CID-12-54 : Construye las dos fuentes usadas por el panel para tokens e informaci√≥n secundaria.
     LOGFONTW lfTokens{};
     lfTokens.lfHeight = -15;
     lfTokens.lfWeight = FW_NORMAL;
@@ -812,7 +812,7 @@ bool IniciarSuperposicionCID(HINSTANCE hInst)
     g_font_tokens = CreateFontIndirectW(&lfTokens);
     g_font_info = CreateFontIndirectW(&lfInfo);
 
-    // CID-12-55 : Registra la clase de ventana y crea la ventana popup transparente de la superposiciÛn.
+    // CID-12-55 : Registra la clase de ventana y crea la ventana popup transparente de la superposici√≥n.
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof(wc);
     wc.hInstance = hInst;
@@ -826,7 +826,7 @@ bool IniciarSuperposicionCID(HINSTANCE hInst)
     g_hwnd = CreateWindowExW(
         WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_LAYERED | WS_EX_NOACTIVATE,
         CLASE,
-        L"SuperposiciÛn CID",
+        L"Superposici√≥n CID",
         WS_POPUP,
         PANEL_DEFAULT_X, PANEL_DEFAULT_Y, PANEL_W, PANEL_H,
         nullptr, nullptr, hInst, nullptr
@@ -838,7 +838,7 @@ bool IniciarSuperposicionCID(HINSTANCE hInst)
     SetLayeredWindowAttributes(g_hwnd, 0, (BYTE)246, LWA_ALPHA);
     SetTimer(g_hwnd, ID_TIMER_ANIM, 16, nullptr);
 
-    // CID-12-56 : Inicializa el estado interno base de la superposiciÛn tras crear la ventana.
+    // CID-12-56 : Inicializa el estado interno base de la superposici√≥n tras crear la ventana.
     EnterCriticalSection(&g_cs);
     g_linea_bitacora = L"[]";
     g_linea_asentado.clear();
@@ -859,7 +859,7 @@ bool IniciarSuperposicionCID(HINSTANCE hInst)
     return true;
 }
 
-// CID-12-57 : Detiene la superposiciÛn liberando ventana, fuentes y sincronizaciÛn interna.
+// CID-12-57 : Detiene la superposici√≥n liberando ventana, fuentes y sincronizaci√≥n interna.
 void DetenerSuperposicionCID()
 {
     if (g_hwnd)
@@ -887,7 +887,7 @@ void DetenerSuperposicionCID()
     }
 }
 
-// CID-12-58 : Actualiza la bit·cora textual heredada y la proyecta al estado visual cuando procede.
+// CID-12-58 : Actualiza la bit√°cora textual heredada y la proyecta al estado visual cuando procede.
 void Superposicion_SetBitacora(const std::wstring& texto)
 {
     if (!g_cs_iniciado) return;
@@ -901,7 +901,7 @@ void Superposicion_SetBitacora(const std::wstring& texto)
     SolicitarInvalidar();
 }
 
-// CID-12-59 : Actualiza el texto mostrado como ˙ltimo asentado en el pie del panel.
+// CID-12-59 : Actualiza el texto mostrado como √∫ltimo asentado en el pie del panel.
 void Superposicion_SetUltimoAsentado(const std::wstring& texto)
 {
     if (!g_cs_iniciado) return;
@@ -913,7 +913,7 @@ void Superposicion_SetUltimoAsentado(const std::wstring& texto)
     SolicitarInvalidar();
 }
 
-// CID-12-60 : Sustituye el estado visual completo por uno autoritativo proveniente de la bit·cora moderna.
+// CID-12-60 : Sustituye el estado visual completo por uno autoritativo proveniente de la bit√°cora moderna.
 void Superposicion_SetEstadoVisual(const EstadoVisualBitacoraCID& estado)
 {
     if (!g_cs_iniciado) return;
@@ -953,7 +953,7 @@ void Superposicion_SetVisible(bool visible)
     SolicitarInvalidar();
 }
 
-// CID-12-63 : Actualiza el rect·ngulo de anclaje usado para posicionar el panel cerca del caret o control activo.
+// CID-12-63 : Actualiza el rect√°ngulo de anclaje usado para posicionar el panel cerca del caret o control activo.
 void Superposicion_SetRectAnclaje(const RECT& rc)
 {
     if (!g_cs_iniciado) return;
@@ -977,7 +977,7 @@ void Superposicion_SetRectAnclaje(const RECT& rc)
     SolicitarInvalidar();
 }
 
-// CID-12-64 : Activa o desactiva el modo visual compacto QWERTY de la superposiciÛn.
+// CID-12-64 : Activa o desactiva el modo visual compacto QWERTY de la superposici√≥n.
 void Superposicion_SetModoQwerty(bool activo)
 {
     if (!g_cs_iniciado) return;

@@ -1,4 +1,4 @@
-// CID-23-01 : Previene inclusiones múltiples de la interfaz pública del layout visual del teclado CID.
+﻿// CID-23-01 : Previene inclusiones múltiples de la interfaz pública del layout visual del teclado CID.
 #pragma once
 
 // CID-23-02 : Incluye los tipos base de Windows usados por geometría y color del layout.

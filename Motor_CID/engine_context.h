@@ -5,6 +5,7 @@
 #include <string>
 
 #include "teclado_cid.h"
+#include "platform.h"
 
 class BitacoraCID;
 class DiccionarioCID;
@@ -25,11 +26,11 @@ struct DetectorContextCID
     bool cs_iniciado = false;
     bool presionada[256] = {};
     bool en_ventana[256] = {};
+    DestinoEntradaCID destino;
     int ventana_ms = 60;
     bool ventana_activa = false;
     bool esperando_liberacion = false;
-    HANDLE timer_queue = nullptr;
-    HANDLE timer = nullptr;
+    UINT_PTR timer = 0;
     BitacoraCID* bitacora = nullptr;
     const DiccionarioCID* diccionario = nullptr;
     ULONGLONG ultimo_pedal_principal_up = 0;
@@ -41,9 +42,12 @@ struct GestorAsentadoContextCID
     bool cs_iniciado = false;
     BitacoraCID* bitacora = nullptr;
     bool pedal_abajo = false;
+    bool pausado = false;
+    bool fallo_inyeccion = false;
+    DestinoEntradaCID destino;
+    DestinoEntradaCID ultimo_destino;
     int auto_ms = 400;
-    HANDLE timer_queue = nullptr;
-    HANDLE timer = nullptr;
+    UINT_PTR timer = 0;
     ULONGLONG ultimo_tick = 0;
     std::wstring ultimo_inyectado;
     bool debe_mayuscula = true;

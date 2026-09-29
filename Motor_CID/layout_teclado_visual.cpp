@@ -1,4 +1,4 @@
-// CID-22-01 : Inclusión de la implementación del layout visual del teclado CID.
+﻿// CID-22-01 : Inclusión de la implementación del layout visual del teclado CID.
 #include "layout_teclado_visual.h"
 
 // CID-22-02 : Inclusión de cabeceras del sistema y utilidades estándar para parsing y contenedores.

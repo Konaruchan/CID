@@ -1,17 +1,19 @@
-// CID-10-01 : Inclusión de la implementación del diccionario CID y su interfaz pública.
+ï»¿// CID-10-01 : InclusiÃ³n de la implementaciÃ³n del diccionario CID y su interfaz pÃºblica.
 #include "diccionario_cid.h"
 
-// CID-10-02 : Inclusión del mapa oficial de teclas usado para normalizar acordes y validar nombres.
+// CID-10-02 : InclusiÃ³n del mapa oficial de teclas usado para normalizar acordes y validar nombres.
 #include "mapa_teclas_cid.h"
 
-// CID-10-03 : Inclusión de utilidades de archivo, parsing, contenedores, ordenación y Windows.
+// CID-10-03 : InclusiÃ³n de utilidades de archivo, parsing, contenedores, ordenaciÃ³n y Windows.
 #include <fstream>
+#include <filesystem>
+#include <stdexcept>
 #include <sstream>
 #include <vector>
 #include <algorithm>
 #include <windows.h>
 
-// CID-10-04 : Recorta espacios ASCII al inicio y final de una cadena estrecha modificándola en sitio.
+// CID-10-04 : Recorta espacios ASCII al inicio y final de una cadena estrecha modificÃ¡ndola en sitio.
 static void TrimInPlace(std::string& s)
 {
     auto isspace_ = [](unsigned char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n'; };
@@ -19,7 +21,7 @@ static void TrimInPlace(std::string& s)
     while (!s.empty() && isspace_((unsigned char)s.back())) s.pop_back();
 }
 
-// CID-10-05 : Recorta espacios Unicode típicos, BOM y NBSP al inicio y final de una cadena ancha.
+// CID-10-05 : Recorta espacios Unicode tÃ­picos, BOM y NBSP al inicio y final de una cadena ancha.
 static void TrimWideInPlace(std::wstring& s)
 {
     auto isws = [](wchar_t c) {
@@ -36,21 +38,21 @@ static void TrimWideInPlace(std::wstring& s)
 static std::wstring ConvertirAUnicode(const std::string& s, UINT cp)
 {
     if (s.empty()) return L"";
-    int need = MultiByteToWideChar(cp, 0, s.c_str(), (int)s.size(), nullptr, 0);
+    int need = MultiByteToWideChar(cp, cp == CP_UTF8 ? MB_ERR_INVALID_CHARS : 0, s.c_str(), (int)s.size(), nullptr, 0);
     if (need <= 0) return L"";
     std::wstring out;
     out.resize(need);
-    MultiByteToWideChar(cp, 0, s.c_str(), (int)s.size(), out.data(), need);
+    MultiByteToWideChar(cp, cp == CP_UTF8 ? MB_ERR_INVALID_CHARS : 0, s.c_str(), (int)s.size(), out.data(), need);
     return out;
 }
 
-// CID-10-07 : Separa una línea del diccionario en acorde, resultado y número tildal.
+// CID-10-07 : Separa una lÃ­nea del diccionario en acorde, resultado y nÃºmero tildal.
 static bool SepararCampos(const std::string& linea, std::string& a, std::string& b, std::string& c)
 {
     size_t p1 = linea.find('|');
     if (p1 == std::string::npos) return false;
     size_t p2 = linea.find('|', p1 + 1);
-    if (p2 == std::string::npos) return false;
+    if (p2 == std::string::npos || linea.find('|', p2 + 1) != std::string::npos) return false;
 
     a = linea.substr(0, p1);
     b = linea.substr(p1 + 1, p2 - (p1 + 1));
@@ -62,7 +64,7 @@ static bool SepararCampos(const std::string& linea, std::string& a, std::string&
     return true;
 }
 
-// CID-10-08 : Divide una cadena de nombres de teclas separadas por más y devuelve las partes limpias.
+// CID-10-08 : Divide una cadena de nombres de teclas separadas por mÃ¡s y devuelve las partes limpias.
 static void SplitPlus(const std::wstring& s, std::vector<std::wstring>& out)
 {
     out.clear();
@@ -74,14 +76,15 @@ static void SplitPlus(const std::wstring& s, std::vector<std::wstring>& out)
 
         TrimWideInPlace(part);
 
-        if (!part.empty()) out.push_back(part);
+        out.push_back(part);
+        if (j == s.size() - 1) out.push_back(L" ");
 
         if (j == std::wstring::npos) break;
         i = j + 1;
     }
 }
 
-// CID-10-09 : Comprueba si un carácter ancho es un dígito decimal ASCII.
+// CID-10-09 : Comprueba si un carÃ¡cter ancho es un dÃ­gito decimal ASCII.
 static bool EsDigito(wchar_t c) { return c >= L'0' && c <= L'9'; }
 
 // CID-10-10 : Convierte un token CID textual como I3 o D10 en su virtual key oficial del mapa fijo.
@@ -90,10 +93,10 @@ static bool ParsearTokenTeclaCID(const std::wstring& token_in, DWORD* out_vk, st
     std::wstring token = token_in;
     TrimWideInPlace(token);
 
-    // CID-10-11 : Rechaza tokens vacíos después de la limpieza inicial.
+    // CID-10-11 : Rechaza tokens vacÃ­os despuÃ©s de la limpieza inicial.
     if (token.empty())
     {
-        err = L"Token de tecla vacío.";
+        err = L"Token de tecla vacÃ­o.";
         return false;
     }
 
@@ -103,24 +106,24 @@ static bool ParsearTokenTeclaCID(const std::wstring& token_in, DWORD* out_vk, st
 
     if (pref != L'I' && pref != L'C' && pref != L'D')
     {
-        err = L"Prefijo inválido (esperado I/C/D) en: [" + token + L"]";
+        err = L"Prefijo invÃ¡lido (esperado I/C/D) en: [" + token + L"]";
         return false;
     }
 
-    // CID-10-13 : Rechaza tokens sin parte numérica tras el prefijo.
-    if (token.size() < 2)
+    // CID-10-13 : Rechaza tokens sin parte numÃ©rica tras el prefijo.
+    if (token.size() < 2 || token.size() > 3)
     {
-        err = L"Falta número en: [" + token + L"]";
+        err = L"Falta nÃºmero en: [" + token + L"]";
         return false;
     }
 
-    // CID-10-14 : Parsea y valida el número de tecla dentro del token textual.
+    // CID-10-14 : Parsea y valida el nÃºmero de tecla dentro del token textual.
     int num = 0;
     for (size_t k = 1; k < token.size(); ++k)
     {
         if (!EsDigito(token[k]))
         {
-            err = L"Número inválido en: [" + token + L"]";
+            err = L"NÃºmero invÃ¡lido en: [" + token + L"]";
             return false;
         }
         num = num * 10 + (token[k] - L'0');
@@ -156,14 +159,14 @@ static bool ParsearTokenTeclaCID(const std::wstring& token_in, DWORD* out_vk, st
     return true;
 }
 
-// CID-10-19 : Normaliza un acorde textual a su forma canónica oficial basada en nombres del mapa CID.
+// CID-10-19 : Normaliza un acorde textual a su forma canÃ³nica oficial basada en nombres del mapa CID.
 static bool NormalizarAcordeDesdeNombres(const std::wstring& acorde_in, std::wstring& acorde_out, std::wstring& err)
 {
     std::vector<std::wstring> partes;
     SplitPlus(acorde_in, partes);
     if (partes.empty())
     {
-        err = L"Acorde vacío.";
+        err = L"Acorde vacÃ­o.";
         return false;
     }
 
@@ -183,7 +186,7 @@ static bool NormalizarAcordeDesdeNombres(const std::wstring& acorde_in, std::wst
         vks.push_back(vk);
     }
 
-    // CID-10-21 : Rechaza acordes con teclas duplicadas dentro de la misma combinación.
+    // CID-10-21 : Rechaza acordes con teclas duplicadas dentro de la misma combinaciÃ³n.
     std::sort(vks.begin(), vks.end());
     for (size_t i = 1; i < vks.size(); ++i)
     {
@@ -194,12 +197,12 @@ static bool NormalizarAcordeDesdeNombres(const std::wstring& acorde_in, std::wst
         }
     }
 
-    // CID-10-22 : Ordena las teclas del acorde según el orden canónico oficial del mapa CID.
+    // CID-10-22 : Ordena las teclas del acorde segÃºn el orden canÃ³nico oficial del mapa CID.
     std::sort(vks.begin(), vks.end(), [](DWORD a, DWORD b) {
         return OrdenTeclaCID(a) < OrdenTeclaCID(b);
         });
 
-    // CID-10-23 : Reconstruye la clave canónica final usando los nombres oficiales del mapa.
+    // CID-10-23 : Reconstruye la clave canÃ³nica final usando los nombres oficiales del mapa.
     acorde_out.clear();
     for (size_t i = 0; i < vks.size(); ++i)
     {
@@ -215,12 +218,13 @@ static bool NormalizarAcordeDesdeNombres(const std::wstring& acorde_in, std::wst
     return true;
 }
 
-// CID-10-24 : Carga el diccionario CID desde archivo validando formato, codificación y unicidad de acordes.
+// CID-10-24 : Carga el diccionario CID desde archivo validando formato, codificaciÃ³n y unicidad de acordes.
 bool DiccionarioCID::CargarDesdeArchivo(const std::wstring& ruta, std::wstring* error)
 {
-    m_map.clear();
+    if (error) error->clear();
+    decltype(m_map) nuevo;
 
-    std::ifstream f(ruta, std::ios::binary);
+    std::ifstream f(std::filesystem::path(ruta), std::ios::binary);
     if (!f)
     {
         if (error) *error = L"No se pudo abrir: " + ruta;
@@ -230,32 +234,33 @@ bool DiccionarioCID::CargarDesdeArchivo(const std::wstring& ruta, std::wstring* 
     std::string linea;
     int numLinea = 0;
 
-    // CID-10-25 : Recorre el archivo línea a línea y procesa solo entradas útiles del diccionario.
+    // CID-10-25 : Recorre el archivo lÃ­nea a lÃ­nea y procesa solo entradas Ãºtiles del diccionario.
     while (std::getline(f, linea))
     {
         numLinea++;
+        if (numLinea == 1 && linea.compare(0, 3, "\xEF\xBB\xBF") == 0) linea.erase(0, 3);
 
         // CID-10-26 : Limpia el retorno de carro final conservado por lecturas CRLF.
         if (!linea.empty() && linea.back() == '\r') linea.pop_back();
 
-        // CID-10-27 : Ignora líneas vacías tras la limpieza superficial.
+        // CID-10-27 : Ignora lÃ­neas vacÃ­as tras la limpieza superficial.
         std::string t = linea;
         TrimInPlace(t);
         if (t.empty()) continue;
 
-        // CID-10-28 : Ignora comentarios de línea con prefijo almohadilla o doble barra.
+        // CID-10-28 : Ignora comentarios de lÃ­nea con prefijo almohadilla o doble barra.
         if (!t.empty() && t[0] == '#') continue;
         if (t.size() >= 2 && t[0] == '/' && t[1] == '/') continue;
 
-        // CID-10-29 : Separa los tres campos esperados de la línea actual del diccionario.
+        // CID-10-29 : Separa los tres campos esperados de la lÃ­nea actual del diccionario.
         std::string sAcorde, sRes, sNum;
         if (!SepararCampos(linea, sAcorde, sRes, sNum))
         {
-            if (error) *error = L"Formato inválido en línea " + std::to_wstring(numLinea) + L". Esperado: A|B|C";
+            if (error) *error = L"Formato invÃ¡lido en lÃ­nea " + std::to_wstring(numLinea) + L". Esperado: A|B|C";
             return false;
         }
 
-        // CID-10-30 : Convierte acorde, resultado y número a Unicode con UTF-8 y fallback CP1252.
+        // CID-10-30 : Convierte acorde, resultado y nÃºmero a Unicode con UTF-8 y fallback CP1252.
         std::wstring wAcorde = ConvertirAUnicode(sAcorde, CP_UTF8);
         std::wstring wRes = ConvertirAUnicode(sRes, CP_UTF8);
         std::wstring wNum = ConvertirAUnicode(sNum, CP_UTF8);
@@ -269,39 +274,52 @@ bool DiccionarioCID::CargarDesdeArchivo(const std::wstring& ruta, std::wstring* 
         TrimWideInPlace(wRes);
         TrimWideInPlace(wNum);
 
-        // CID-10-32 : Parsea el número tildal y falla si el campo no es un entero válido.
+        // CID-10-32 : Parsea el nÃºmero tildal y falla si el campo no es un entero vÃ¡lido.
         int numero = -1;
         try {
-            numero = std::stoi(wNum);
+            size_t consumidos = 0;
+            numero = std::stoi(wNum, &consumidos);
+            if (consumidos != wNum.size() || numero < -1) throw std::invalid_argument("numero tildal");
         }
         catch (...) {
-            if (error) *error = L"Número tildal inválido en línea " + std::to_wstring(numLinea);
+            if (error) *error = L"NÃºmero tildal invÃ¡lido en lÃ­nea " + std::to_wstring(numLinea);
             return false;
         }
 
-        // CID-10-33 : Normaliza el acorde textual a su clave canónica oficial para almacenarlo en el mapa.
+        // CID-10-33 : Normaliza el acorde textual a su clave canÃ³nica oficial para almacenarlo en el mapa.
         std::wstring acordeKey, err;
         if (!NormalizarAcordeDesdeNombres(wAcorde, acordeKey, err))
         {
-            if (error) *error = L"Error en línea " + std::to_wstring(numLinea) + L": " + err;
+            if (error) *error = L"Error en lÃ­nea " + std::to_wstring(numLinea) + L": " + err;
             return false;
         }
 
         // CID-10-34 : Rechaza acordes duplicados ya presentes en el diccionario cargado.
-        if (m_map.find(acordeKey) != m_map.end())
+        if (nuevo.find(acordeKey) != nuevo.end())
         {
-            if (error) *error = L"Acorde duplicado en diccionario: [" + acordeKey + L"] (línea " + std::to_wstring(numLinea) + L")";
+            if (error) *error = L"Acorde duplicado en diccionario: [" + acordeKey + L"] (lÃ­nea " + std::to_wstring(numLinea) + L")";
             return false;
         }
 
-        // CID-10-35 : Construye la entrada final del diccionario y la inserta en el mapa por acorde canónico.
+        // CID-10-35 : Construye la entrada final del diccionario y la inserta en el mapa por acorde canÃ³nico.
         EntradaDiccionarioCID e;
         e.resultado_crudo = wRes;
         e.numero_tildal = numero;
 
-        m_map.emplace(acordeKey, e);
+        if (wRes.empty())
+        {
+            if (error) *error = L"Resultado vacÃ­o en lÃ­nea " + std::to_wstring(numLinea);
+            return false;
+        }
+        nuevo.emplace(acordeKey, e);
     }
 
+    if (f.bad() || nuevo.empty())
+    {
+        if (error) *error = L"Diccionario vacÃ­o o error de lectura: " + ruta;
+        return false;
+    }
+    m_map.swap(nuevo);
     return true;
 }
 

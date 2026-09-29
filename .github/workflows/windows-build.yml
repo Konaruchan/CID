@@ -1,0 +1,25 @@
+name: Build Windows CID
+on:
+  push:
+    branches: [main, 'codex/cid-*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x64, Win32]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compilar, probar y empaquetar
+        shell: pwsh
+        run: ./scripts/build.ps1 -Platform '${{ matrix.platform }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CID-0.2-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error

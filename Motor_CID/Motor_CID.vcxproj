@@ -87,7 +87,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -156,6 +156,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bitacora_cid.h" />
+    <ClInclude Include="bandeja_cid.h" />
     <ClInclude Include="calibracion_teclado.h" />
     <ClInclude Include="engine_context.h" />
     <ClInclude Include="event_bus.h" />
@@ -171,17 +172,17 @@
     <ClInclude Include="superposicion_cid.h" />
     <ClInclude Include="teclado_cid.h" />
   </ItemGroup>
-  <ItemGroup>
-    <CopyFileToFolders Include="cid0.cid">
-      <FileType>Document</FileType>
-      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)Diccionarios\</DestinationFolders>
-    </CopyFileToFolders>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\keyboard-layout.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Target Name="CopiarRecursosCID" AfterTargets="Build">
+    <MakeDir Directories="$(OutDir)Diccionarios" />
+    <Copy SourceFiles="$(ProjectDir)cid0.cid" DestinationFolder="$(OutDir)Diccionarios" />
+    <Copy SourceFiles="$(ProjectDir)Resources\keyboard-layout.json" DestinationFolder="$(OutDir)" />
+  </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

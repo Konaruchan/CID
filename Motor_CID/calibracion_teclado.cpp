@@ -1,4 +1,4 @@
-// CID-14-01 : Inclusión de la implementación del sistema de calibración persistente del teclado CID.
+﻿// CID-14-01 : Inclusión de la implementación del sistema de calibración persistente del teclado CID.
 #include "calibracion_teclado.h"
 
 // CID-14-02 : Inclusión del mapa oficial de teclas CID usado para validar y ordenar asignaciones.
@@ -100,7 +100,8 @@ namespace
     // CID-14-12 : Escribe un archivo de texto UTF-8 con BOM a partir de una cadena Unicode.
     bool EscribirArchivoTextoUtf8(const std::wstring& ruta, const std::wstring& texto, std::wstring* error)
     {
-        std::ofstream f(ruta, std::ios::binary | std::ios::trunc);
+        const std::wstring temporal = ruta + L".tmp";
+        std::ofstream f(temporal, std::ios::binary | std::ios::trunc);
         if (!f)
         {
             if (error) *error = L"No se pudo escribir el archivo: " + ruta;
@@ -112,7 +113,12 @@ namespace
         f.write((const char*)bom, 3);
         f.write(utf8.data(), (std::streamsize)utf8.size());
         f.close();
-
+        if (!f || !MoveFileExW(temporal.c_str(), ruta.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        {
+            DeleteFileW(temporal.c_str());
+            if (error) *error = L"No se pudo guardar la calibración. Comprueba los permisos y el espacio disponible: " + ruta;
+            return false;
+        }
         return true;
     }
 

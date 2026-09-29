@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <UIAutomation.h>
 #include <string>
+#include <atomic>
 #include "event_bus.h"
 #include "platform.h"
 
@@ -37,10 +38,8 @@ static std::wstring g_ultima_clase_log;
 static std::wstring g_ultimo_origen_log;
 
 // CID-18-08 : Marca temporal del último input realmente escribible detectado.
-static ULONGLONG g_ultimo_input_escribible_tick = 0;
-static ULONGLONG g_ultimo_evento_actividad_tick = 0;
+static std::atomic<ULONGLONG> g_ultimo_input_escribible_tick{0};
 static EventBusCIDSubId g_sub_actividad = 0;
-static const ULONGLONG DEDUPE_ACTIVIDAD_MS = 30;
 
 // CID-18-09 : Estructura del contexto de texto detectado en un momento dado.
 struct ContextoTextoDetectado
@@ -504,9 +503,9 @@ static void AplicarContextoSiCambia_NoLock(const ContextoTextoDetectado& ctx)
     }
 
     ULONGLONG ahora = PlataformaCIDActual()->NowMs();
-    bool actividadReciente =
-        (g_ultimo_input_escribible_tick != 0) &&
-        ((ahora - g_ultimo_input_escribible_tick) <= VENTANA_ACTIVACION_MS);
+    const auto ultimoInput = g_ultimo_input_escribible_tick.load(std::memory_order_relaxed);
+    bool actividadReciente = ultimoInput != 0 && ahora >= ultimoInput &&
+        ahora - ultimoInput <= VENTANA_ACTIVACION_MS;
 
     // CID-18-37 : Oculta el panel y limpia candidato si ya no hay contexto editable visible.
     if (!ctx.visible)
@@ -637,18 +636,8 @@ static void OnEventoActividadEscribible(const EventBusCIDEvento& evento, void*)
     if (!g_cs_iniciado || !g_iniciado)
         return;
 
-    EnterCriticalSection(&g_cs);
-    if (g_ultimo_evento_actividad_tick != 0 &&
-        evento.timestamp_ms >= g_ultimo_evento_actividad_tick &&
-        (evento.timestamp_ms - g_ultimo_evento_actividad_tick) < DEDUPE_ACTIVIDAD_MS)
-    {
-        LeaveCriticalSection(&g_cs);
-        return;
-    }
-
-    g_ultimo_evento_actividad_tick = evento.timestamp_ms;
-    g_ultimo_input_escribible_tick = evento.timestamp_ms;
-    LeaveCriticalSection(&g_cs);
+    // El hook no debe esperar a que UI Automation termine una consulta a otra app.
+    g_ultimo_input_escribible_tick.store(evento.timestamp_ms, std::memory_order_relaxed);
 }
 
 // CID-18-44 : Inicializa el panel de contexto, su temporizador y su estado base de detección.
@@ -669,7 +658,6 @@ bool IniciarPanelContextoTexto()
     g_ultima_clase_log.clear();
     g_ultimo_origen_log.clear();
     g_ultimo_input_escribible_tick = 0;
-    g_ultimo_evento_actividad_tick = 0;
     g_tenemos_candidato = false;
     g_candidato = ContextoTextoDetectado{};
     g_candidato_tick = 0;
@@ -731,8 +719,7 @@ void DetenerPanelContextoTexto()
         g_ultima_clase_log.clear();
         g_ultimo_origen_log.clear();
         g_ultimo_input_escribible_tick = 0;
-        g_ultimo_evento_actividad_tick = 0;
-        g_tenemos_candidato = false;
+            g_tenemos_candidato = false;
         g_candidato = ContextoTextoDetectado{};
         g_candidato_tick = 0;
 

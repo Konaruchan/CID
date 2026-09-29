@@ -1,4 +1,4 @@
-// CID-11-01 : Previene inclusiones múltiples de la interfaz pública del diccionario CID.
+﻿// CID-11-01 : Previene inclusiones múltiples de la interfaz pública del diccionario CID.
 #pragma once
 
 // CID-11-02 : Incluye los tipos de texto y mapa hash usados por la interfaz del diccionario.
