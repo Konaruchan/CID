@@ -64,3 +64,5 @@ Para conocer con precisión los permisos, condiciones y limitaciones aplicables,
 ## Build 0.2 beta
 
 Consulta [los cambios](CHANGELOG.md) y la [guía rápida](GUIA-RAPIDA.md). Para compilar y generar el ZIP con sus recursos, ejecuta `./scripts/build.ps1 -Platform x64` en PowerShell con Visual Studio 2022 y la carga de trabajo C++. También se genera la variante de 32 bits con `-Platform Win32`. El script ejecuta las pruebas antes de empaquetar.
+
+El diccionario fuente vigente es `Motor_CID/cid0.cid`. Al compilar se copia como `Diccionarios/cid0.cid` junto al ejecutable; la copia histórica bajo `Motor_CID/Diccionarios/` no se empaqueta.

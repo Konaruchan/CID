@@ -1,8 +1,11 @@
 # CID 0.2 beta
 
-Esta build conserva el sistema de acordes, la bitácora, D10 y los pedales descritos en la wiki. No cambia el diccionario base ni su asignación de acordes.
+Esta build conserva el sistema de acordes, la bitácora, D10 y los pedales descritos en la wiki. No inventa ni reasigna acordes: empaqueta `Motor_CID/cid0.cid`, que contiene las últimas correcciones del autor. La copia histórica de `Motor_CID/Diccionarios/cid0.cid` ya no se usa al compilar.
 
 ## Correcciones
+
+- El empaquetado usa el diccionario más reciente; una prueba protege la corrección de `I6+D9 → r` frente a la copia antigua.
+- Las piezas pendientes quedan ligadas a la ventana y al control Win32 de origen. Si cambia el destino antes de resolver el acorde o de asentar, se conserva lo pendiente y se pide volver al campo original. El borrado también comprueba el destino.
 
 - Los temporizadores del detector y del asentado se ejecutan en el hilo de mensajes de Windows. Se elimina la acumulación de temporizadores de un solo uso y la ejecución simultánea de operaciones compuestas sobre la bitácora.
 - Al pasar a QWERTY se cancela el acorde en curso, se restablecen las teclas/pedal y se pausa el autoasentado conservando las piezas pendientes.
@@ -27,3 +30,5 @@ Esta build conserva el sistema de acordes, la bitácora, D10 y los pedales descr
 `./scripts/build.ps1 -Platform x64` (o `Win32`) compila y ejecuta las pruebas de diccionario, bitácora, inyección fallida, pausa/reanudación, cancelación/liberación de temporizadores y guardado de calibración. Requiere Visual Studio 2022 con C++ y Windows SDK.
 
 La batería automatizada usa una plataforma simulada para no escribir en otras aplicaciones. La captura física, el asistente de calibración, el comportamiento de UI Automation y la presentación visual requieren una prueba manual en Windows con el teclado del usuario.
+
+La comprobación del destino distingue ventanas y controles Win32. No identifica por sí sola cambios de documento, cursor o campos virtuales dentro de un mismo HWND (por ejemplo, ciertos editores web).

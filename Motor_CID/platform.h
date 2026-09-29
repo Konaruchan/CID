@@ -4,11 +4,20 @@
 #include <windows.h>
 #include <string>
 
+// Identidad Win32 del destino; no identifica campos virtuales que comparten HWND.
+struct DestinoEntradaCID
+{
+    HWND ventana = nullptr;
+    HWND foco = nullptr;
+    bool operator==(const DestinoEntradaCID&) const = default;
+};
+
 // CID-30-02 : Define la interfaz de plataforma para tiempo, teclado e inyección.
 class IPlatformCID
 {
 public:
     virtual ~IPlatformCID() = default;
+    virtual DestinoEntradaCID DestinoActual() const = 0;
     virtual ULONGLONG NowMs() const = 0;
     virtual SHORT AsyncKeyState(int vk) const = 0;
     virtual UINT SendInputEvents(UINT count, INPUT* events) const = 0;

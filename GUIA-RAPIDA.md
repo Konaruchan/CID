@@ -15,6 +15,7 @@ Al pausar, las piezas pendientes se conservan y el motor deja de asentarlas auto
 
 ## Si algo falla
 
+- **Destino cambiado:** vuelve al campo original y pulsa/suelta Espacio. CID conserva los fragmentos para evitar enviarlos a otra ventana. Esta protección no distingue todos los campos virtuales de una misma ventana ni los cambios de posición del cursor.
 - **Faltan archivos:** vuelve a extraer el ZIP completo. Necesitas `keyboard-layout.json` y `Diccionarios/cid0.cid` junto al ejecutable.
 - **No se guarda la calibración:** usa una carpeta con permisos de escritura y comprueba el espacio libre. Un guardado fallido conserva el archivo anterior.
 - **No se completa la escritura:** CID conserva las piezas y detiene los reintentos automáticos. Revisa el campo de destino (podría haber llegado parte del texto), corrígelo si procede y pulsa/suelta Espacio para reintentar. Windows puede bloquear la entrada a una aplicación con permisos superiores.

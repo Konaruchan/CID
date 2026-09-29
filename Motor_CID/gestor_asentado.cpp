@@ -132,10 +132,18 @@ static bool InyectarBackspace(int n)
 // CID-08-16 : Asienta la línea viva actual concatenando piezas, inyectando texto y cerrando la línea visual.
 static void Asentar_NoLock()
 {
-    if (!GCtx().bitacora) return;
+    if (!GCtx().bitacora || GCtx().pausado) return;
 
     std::vector<std::wstring> piezas = GCtx().bitacora->ObtenerCopia();
     if (piezas.empty()) return;
+    const auto destino = PlataformaCIDActual()->DestinoActual();
+    if (!GCtx().destino.ventana) GCtx().destino = destino;
+    if (!destino.ventana || destino != GCtx().destino)
+    {
+        GCtx().fallo_inyeccion = true;
+        Superposicion_SetUltimoAsentado(L"Destino cambiado. Vuelve al campo original y pulsa Espacio.");
+        return;
+    }
 
     // CID-08-17 : Construye la palabra final concatenando todas las piezas pendientes sin espacios internos.
     std::wstring palabra;
@@ -164,6 +172,7 @@ static void Asentar_NoLock()
     }
     GCtx().fallo_inyeccion = false;
     GCtx().ultimo_inyectado = texto;
+    GCtx().ultimo_destino = destino;
     Superposicion_SetUltimoAsentado(palabra);
 
     // CID-08-22 : Actualiza el contexto de mayúscula para la siguiente palabra según el signo final asentado.
@@ -175,6 +184,7 @@ static void Asentar_NoLock()
 
     // CID-08-23 : Cierra la línea actual en la bitácora y limpia los pendientes de la línea viva.
     GCtx().bitacora->CerrarLineaPorAsentado();
+    GCtx().destino = {};
 
     // CID-08-24 : Refresca el panel visual tras completar el asentado real de la línea.
     RefrescarSuperposicionVisual_NoLock(GCtx().bitacora);
@@ -250,6 +260,8 @@ bool IniciarGestorAsentado(int auto_ms, BitacoraCID* bitacora)
 
     GCtx().ultimo_inyectado.clear();
     GCtx().debe_mayuscula = true;
+    GCtx().destino = {};
+    GCtx().ultimo_destino = {};
 
     GCtx().promedio_ms = (double)ClampInt(GCtx().auto_ms - MARGEN_MS, 80, 500);
 
@@ -369,6 +381,13 @@ void BorrarUltimoAsentado()
         return;
     }
 
+    if (GCtx().pausado || PlataformaCIDActual()->DestinoActual() != GCtx().ultimo_destino)
+    {
+        GCtx().ultimo_inyectado.clear();
+        Superposicion_SetUltimoAsentado(L"Destino cambiado: no se ha borrado texto.");
+        LeaveCriticalSection(&GCtx().cs);
+        return;
+    }
     int n = (int)GCtx().ultimo_inyectado.size();
 
     // CID-08-51 : Borra físicamente del sistema el último asentado usando backspaces inyectados.
@@ -387,6 +406,7 @@ void BorrarUltimoAsentado()
     if (GCtx().bitacora)
     {
         GCtx().bitacora->ReabrirUltimaLineaAsentada();
+        GCtx().destino = GCtx().ultimo_destino;
         RefrescarSuperposicionVisual_NoLock(GCtx().bitacora);
     }
 
@@ -408,4 +428,16 @@ void PausarGestorAsentado(bool pausa)
     // Una edición QWERTY invalida el borrado exacto del último asentado.
     GCtx().ultimo_inyectado.clear();
     LeaveCriticalSection(&GCtx().cs);
+}
+
+// Mantener los fragmentos de una palabra ligados al destino donde empezó.
+bool PrepararDestinoCID(const DestinoEntradaCID& destino)
+{
+    if (!GCtx().cs_iniciado) return true;
+    EnterCriticalSection(&GCtx().cs);
+    if (!GCtx().bitacora || !GCtx().bitacora->HayPendientes() || !GCtx().destino.ventana)
+        GCtx().destino = destino;
+    const bool ok = destino.ventana && destino == GCtx().destino;
+    LeaveCriticalSection(&GCtx().cs);
+    return ok;
 }

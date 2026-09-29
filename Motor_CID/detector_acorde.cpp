@@ -255,6 +255,17 @@ static void CALLBACK TimerCallback(HWND, UINT, UINT_PTR id, DWORD)
     KillTimer(nullptr, DCtx().timer);
     DCtx().timer = 0;
 
+    if (DCtx().destino != PlataformaCIDActual()->DestinoActual() ||
+        !DCtx().destino.ventana || !PrepararDestinoCID(DCtx().destino))
+    {
+        DCtx().ventana_activa = false;
+        LimpiarVentana_NoLock();
+        DCtx().esperando_liberacion = HayAlgunaTeclaPresionada_NoLock();
+        Superposicion_SetUltimoAsentado(L"Destino cambiado: vuelve al campo original antes de continuar.");
+        LeaveCriticalSection(&DCtx().cs);
+        return;
+    }
+
     // CID-04-39 : Marca la ventana como cerrada y repesca las teclas físicas que sigan realmente pulsadas.
     DCtx().ventana_activa = false;
 
@@ -411,6 +422,7 @@ void RecibirEventoTeclaCID(DWORD vk, DWORD scanCode, bool presionada)
         // CID-04-61 : Abre una nueva ventana de acorde con temporizador si todavía no había una activa.
         if (!DCtx().ventana_activa)
         {
+            DCtx().destino = PlataformaCIDActual()->DestinoActual();
             DCtx().ventana_activa = true;
             LimpiarVentana_NoLock();
             DCtx().en_ventana[scanCode] = true;

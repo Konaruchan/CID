@@ -180,7 +180,7 @@
   </ItemDefinitionGroup>
   <Target Name="CopiarRecursosCID" AfterTargets="Build">
     <MakeDir Directories="$(OutDir)Diccionarios" />
-    <Copy SourceFiles="$(ProjectDir)Diccionarios\cid0.cid" DestinationFolder="$(OutDir)Diccionarios" />
+    <Copy SourceFiles="$(ProjectDir)cid0.cid" DestinationFolder="$(OutDir)Diccionarios" />
     <Copy SourceFiles="$(ProjectDir)Resources\keyboard-layout.json" DestinationFolder="$(OutDir)" />
   </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

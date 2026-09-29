@@ -7,6 +7,17 @@
 class PlatformCIDWin32 final : public IPlatformCID
 {
 public:
+    DestinoEntradaCID DestinoActual() const override
+    {
+        DestinoEntradaCID destino;
+        destino.ventana = GetForegroundWindow();
+        if (!destino.ventana) return destino;
+        GUITHREADINFO info{};
+        info.cbSize = sizeof(info);
+        const DWORD hilo = GetWindowThreadProcessId(destino.ventana, nullptr);
+        if (hilo && GetGUIThreadInfo(hilo, &info)) destino.foco = info.hwndFocus;
+        return destino;
+    }
     ULONGLONG NowMs() const override
     {
         return GetTickCount64();

@@ -17,7 +17,7 @@ try {
     $sources = @(Get-ChildItem "$root\Motor_CID\*.cpp" | Where-Object Name -ne 'main.cpp' | ForEach-Object FullName)
     & cl /nologo /std:c++20 /EHsc /utf-8 /MT /DUNICODE /D_UNICODE "/I$root\Motor_CID" "$root\tests\regression.cpp" @sources "/Fe:regression.exe" /link user32.lib gdi32.lib ole32.lib oleaut32.lib uiautomationcore.lib
     if ($LASTEXITCODE -ne 0) { throw 'Fallo de compilación de las pruebas.' }
-    & .\regression.exe "$root\Motor_CID\Diccionarios\cid0.cid"
+    & .\regression.exe "$root\Motor_CID\cid0.cid"
     if ($LASTEXITCODE -ne 0) { throw 'Han fallado las pruebas de regresión.' }
 } finally { Pop-Location }
 Copy-Item LICENSE, README.md, CHANGELOG.md, GUIA-RAPIDA.md $out

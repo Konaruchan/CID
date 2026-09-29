@@ -21,10 +21,13 @@ struct PlataformaPrueba : IPlatformCID
 {
     bool permitir = true;
     int intentos = 0;
+    mutable int borrados = 0;
+    DestinoEntradaCID destino{ reinterpret_cast<HWND>(1), reinterpret_cast<HWND>(2) };
+    DestinoEntradaCID DestinoActual() const override { return destino; }
     std::wstring recibido;
     ULONGLONG NowMs() const override { return GetTickCount64(); }
     SHORT AsyncKeyState(int) const override { return 0; }
-    UINT SendInputEvents(UINT count, INPUT*) const override { return count; }
+    UINT SendInputEvents(UINT count, INPUT*) const override { ++borrados; return count; }
     bool SendUnicodeText(const std::wstring& texto) const override
     {
         auto self = const_cast<PlataformaPrueba*>(this);
@@ -71,6 +74,8 @@ int wmain(int argc, wchar_t** argv)
         Verificar(dic.Buscar(L"I1+I2", entrada) && entrada.resultado_crudo == L"á", "normalizacion del acorde");
         Verificar(argc > 1 && dic.CargarDesdeArchivo(argv[1], &error), "diccionario distribuido no carga");
 
+        Verificar(dic.Buscar(L"I6+D9", entrada) && entrada.resultado_crudo == L"r", "se empaqueta diccionario antiguo");
+
         BitacoraCID bitacora;
         bitacora.Anotar(L"cafe", 2);
         bitacora.AnotarTokenVisualPieza(L"cafe");
@@ -100,9 +105,24 @@ int wmain(int argc, wchar_t** argv)
         EstablecerModoCID(true);
         Bombear(650);
         Verificar(bitacora.Tamano() == 0 && plataforma.recibido == L"Hola mundo ", "reanudar asentado");
+        bitacora.Anotar(L"seguro", -1);
+        Verificar(PrepararDestinoCID(plataforma.destino), "capturar destino");
+        const auto original = plataforma.destino;
+        plataforma.destino.foco = reinterpret_cast<HWND>(3);
+        const int antes = plataforma.intentos;
+        Bombear(650);
+        EventoTeclaCID_Key(false);
+        Verificar(plataforma.intentos == antes && bitacora.Tamano() == 1, "escritura en otro campo");
+        Verificar(!PrepararDestinoCID(plataforma.destino), "mezcla fragmentos de otro destino");
+        plataforma.destino = original;
+        EventoTeclaCID_Key(false);
+        Verificar(bitacora.Tamano() == 0, "no recupera pendientes al volver al destino");
+        plataforma.destino.ventana = reinterpret_cast<HWND>(4);
+        BorrarUltimoAsentado();
+        Verificar(plataforma.borrados == 0, "borrado en otra ventana");
+        plataforma.destino = original;
         DetenerGestorAsentado();
         DetenerGestorAsentado();
-        RestablecerPlataformaCIDPredeterminada();
 
         Verificar(EstablecerAsignacionTeclaCID(L"I1", 4), "asignar tecla de prueba");
         Verificar(IniciarDetectorAcorde(30), "iniciar detector");
@@ -117,6 +137,13 @@ int wmain(int argc, wchar_t** argv)
             while (DCtx().timer != 0 && GetTickCount64() < limite) Bombear(10);
             Verificar(DCtx().timer == 0 && !DCtx().ventana_activa, "temporizador no liberado");
         }
+        const auto tamanoAntes = bitacora.Tamano();
+        RecibirEventoTeclaCID('3', 4, true);
+        plataforma.destino.foco = reinterpret_cast<HWND>(5);
+        Bombear(150);
+        Verificar(bitacora.Tamano() == tamanoAntes, "acorde resuelto en otro destino");
+        plataforma.destino = original;
+        RecibirEventoTeclaCID('3', 4, false);
         RecibirEventoTeclaCID('3', 4, true);
         EstablecerModoCID(false);
         auto pendientes = bitacora.Tamano();
@@ -128,6 +155,7 @@ int wmain(int argc, wchar_t** argv)
         Verificar(GuardarCalibracionTeclado((temp / L"calibracion.json").wstring(), &error), "guardar calibracion");
         Verificar(CargarCalibracionTeclado((temp / L"calibracion.json").wstring(), &error), "leer calibracion guardada");
         Verificar(!GuardarCalibracionTeclado((temp / L"no-existe" / L"calibracion.json").wstring(), &error), "guardado fallido informa exito");
+        RestablecerPlataformaCIDPredeterminada();
         std::filesystem::remove_all(temp);
         std::cout << comprobaciones << " comprobaciones correctas\n";
         return 0;

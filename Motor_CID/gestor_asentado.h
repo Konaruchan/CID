@@ -20,3 +20,6 @@ void EventoTeclaCID_Key(bool presionada);
 // CID-09-07 : Declara el borrado del último asentado recientemente inyectado por el sistema CID.
 void BorrarUltimoAsentado();
 void PausarGestorAsentado(bool pausa);
+
+struct DestinoEntradaCID;
+bool PrepararDestinoCID(const DestinoEntradaCID& destino);
