@@ -4,6 +4,8 @@ Esta build conserva el sistema de acordes, la bitácora, D10 y los pedales descr
 
 ## Correcciones
 
+- El hook comunica la actividad al panel mediante una marca temporal atómica, sin esperar al bloqueo de una consulta de UI Automation a otra aplicación.
+
 - El empaquetado usa el diccionario más reciente; una prueba protege la corrección de `I6+D9 → r` frente a la copia antigua.
 - Las piezas pendientes quedan ligadas a la ventana y al control Win32 de origen. Si cambia el destino antes de resolver el acorde o de asentar, se conserva lo pendiente y se pide volver al campo original. El borrado también comprueba el destino.
 
