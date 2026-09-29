@@ -15,17 +15,27 @@ New-Item -ItemType Directory -Force "$root\obj\tests-$Platform" | Out-Null
 Push-Location "$root\obj\tests-$Platform"
 try {
     $sources = @(Get-ChildItem "$root\Motor_CID\*.cpp" | Where-Object Name -ne 'main.cpp' | ForEach-Object FullName)
-    & cl /nologo /std:c++20 /EHsc /utf-8 /MT /DUNICODE /D_UNICODE "/I$root\Motor_CID" "$root\tests\regression.cpp" @sources "/Fe:regression.exe" /link user32.lib gdi32.lib ole32.lib oleaut32.lib uiautomationcore.lib
+    & cl /nologo /std:c++20 /EHsc /utf-8 /MT /DUNICODE /D_UNICODE "/I$root\Motor_CID" "$root\tests\regression.cpp" @sources "/Fe:regression.exe" /link user32.lib gdi32.lib ole32.lib oleaut32.lib uiautomationcore.lib shell32.lib
     if ($LASTEXITCODE -ne 0) { throw 'Fallo de compilación de las pruebas.' }
     & .\regression.exe "$root\Motor_CID\cid0.cid"
     if ($LASTEXITCODE -ne 0) { throw 'Han fallado las pruebas de regresión.' }
 } finally { Pop-Location }
-Copy-Item LICENSE, README.md, CHANGELOG.md, GUIA-RAPIDA.md $out
+Copy-Item LICENSE, README.md, CHANGELOG.md, GUIA-RAPIDA.md, MECACID.md $out
+$smoke = Start-Process -FilePath "$out\Motor_CID.exe" -ArgumentList '--mecacid-smoke' -PassThru
+if (!$smoke.WaitForExit(60000)) { $smoke.Kill(); throw 'MECACID no terminó la prueba de interfaz.' }
+if ($smoke.ExitCode -ne 0) { throw "MECACID falló la prueba de interfaz: $($smoke.ExitCode)" }
+New-Item -ItemType Directory -Force dist | Out-Null
+Add-Type -AssemblyName System.Drawing
+foreach ($bmp in Get-ChildItem "$out\mecacid-*.bmp") {
+    $img = [System.Drawing.Image]::FromFile($bmp.FullName)
+    try { $img.Save("$root\dist\$($bmp.BaseName)-$arch.png", [System.Drawing.Imaging.ImageFormat]::Png) }
+    finally { $img.Dispose() }
+}
 foreach ($resource in @('Motor_CID.exe', 'keyboard-layout.json', 'Diccionarios\cid0.cid')) {
     if (!(Test-Path "$out$resource")) { throw "Falta recurso: $resource" }
 }
 New-Item -ItemType Directory -Force dist | Out-Null
-$zip = "$root\dist\Motor-CID-Beta-0.2-Win-$arch.zip"
+$zip = "$root\dist\CID-MECACID-Beta-0.3-Win-$arch.zip"
 # Solo archivos de distribución, sin símbolos ni intermedios de compilación.
-Compress-Archive -Path "$out\Motor_CID.exe", "$out\keyboard-layout.json", "$out\Diccionarios", "$out\LICENSE", "$out\README.md", "$out\CHANGELOG.md", "$out\GUIA-RAPIDA.md" -DestinationPath $zip -Force
+Compress-Archive -Path "$out\Motor_CID.exe", "$out\keyboard-layout.json", "$out\Diccionarios", "$out\LICENSE", "$out\README.md", "$out\CHANGELOG.md", "$out\GUIA-RAPIDA.md", "$out\MECACID.md" -DestinationPath $zip -Force
 (Get-FileHash $zip -Algorithm SHA256).Hash + '  ' + (Split-Path $zip -Leaf) | Set-Content "$zip.sha256" -Encoding ascii

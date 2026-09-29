@@ -147,6 +147,8 @@
     <ClCompile Include="inyeccion_texto.cpp" />
     <ClCompile Include="layout_teclado_visual.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="mecacid.cpp" />
+    <ClCompile Include="mecacid_model.cpp" />
     <ClCompile Include="mapa_teclas_cid.cpp" />
     <ClCompile Include="panel_contexto_texto.cpp" />
     <ClCompile Include="platform_win32.cpp" />
@@ -157,6 +159,8 @@
   <ItemGroup>
     <ClInclude Include="bitacora_cid.h" />
     <ClInclude Include="bandeja_cid.h" />
+    <ClInclude Include="mecacid.h" />
+    <ClInclude Include="mecacid_model.h" />
     <ClInclude Include="calibracion_teclado.h" />
     <ClInclude Include="engine_context.h" />
     <ClInclude Include="event_bus.h" />

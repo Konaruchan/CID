@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <filesystem>
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -10,6 +11,7 @@
 #include "engine_context.h"
 #include "platform.h"
 #include "calibracion_teclado.h"
+#include "mecacid_model.h"
 
 static int comprobaciones = 0;
 void Verificar(bool ok, const char* mensaje)
@@ -75,6 +77,55 @@ int wmain(int argc, wchar_t** argv)
         Verificar(argc > 1 && dic.CargarDesdeArchivo(argv[1], &error), "diccionario distribuido no carga");
 
         Verificar(dic.Buscar(L"I6+D9", entrada) && entrada.resultado_crudo == L"r", "se empaqueta diccionario antiguo");
+
+        MecaModelo tutor(dic);
+        Verificar(tutor.NumeroEntradas() > 500, "MECACID no usa el diccionario completo");
+        Verificar(tutor.Traducir(L"  \t\n").pasos.empty(), "texto vacio crea pasos");
+        Verificar(tutor.Traducir(std::wstring(513, L'a')).pasos.empty(), "limite de traduccion");
+        auto normal = tutor.Traducir(L"  HOLA  MUNDO\nCAFÉ ");
+        Verificar(normal.normalizado == L"hola mundo café ", "normalizacion espanola");
+        auto fuera = tutor.Traducir(L"hola ☃ mundo");
+        Verificar(fuera.alternativasQwerty == 1 && fuera.palabras == 3, "fallback QWERTY explicito");
+        auto reproducir = [&](const MecaPlan& plan) {
+            BitacoraCID simulacion;
+            std::wstring terminado;
+            for (const auto& paso : plan.pasos) {
+                if (paso.tipo == MecaTipo::Acorde) {
+                    EntradaDiccionarioCID e;
+                    Verificar(dic.Buscar(paso.acorde, e), "acorde inventado por traductor");
+                    Verificar(paso.acorde != L"D10" && std::count(paso.acorde.begin(), paso.acorde.end(), L'+') < 3, "acorde no ejecutable");
+                    simulacion.Anotar(e.resultado_crudo, e.numero_tildal);
+                } else if (paso.tipo == MecaTipo::Modificador) {
+                    Verificar(simulacion.AplicarModificadorD10(), "D10 no aplicable");
+                } else if (paso.tipo == MecaTipo::Qwerty) {
+                    terminado += paso.fragmento;
+                    continue;
+                }
+                std::wstring palabra;
+                for (const auto& parte : simulacion.ObtenerCopia()) palabra += parte;
+                Verificar(MecaMinusculas(palabra) == paso.acumulado, "traduccion difiere del motor real");
+                if (paso.tipo == MecaTipo::Asentar) { terminado += MecaMinusculas(palabra) + L" "; simulacion.Limpiar(); }
+            }
+            Verificar(terminado == plan.normalizado, "traduccion incompleta");
+        };
+        reproducir(normal); reproducir(fuera);
+        reproducir(tutor.Traducir(L"¿cómo estás? ¡hola! café música mañana"));
+        for (const auto& [acorde, e] : dic.EnumerarEntradas()) reproducir(tutor.Traducir(e.resultado_crudo));
+        for (int nivel = 0; nivel < 5; ++nivel) {
+            auto ejercicios = tutor.Ejercicios(nivel);
+            Verificar(!ejercicios.empty(), "nivel sin ejercicios");
+            for (const auto& ejercicio : ejercicios) {
+                auto plan = tutor.Traducir(ejercicio);
+                Verificar(plan.alternativasQwerty == 0, "ejercicio CID necesita QWERTY");
+                reproducir(plan);
+            }
+        }
+        Verificar(cargar("I1|a|1\nI2|ab|1\nI3|bc|1\nI4|c|1\n"), "diccionario de optimizacion");
+        MecaModelo minimo(dic);
+        auto optimo = minimo.Traducir(L"abc");
+        Verificar(optimo.pasos.size() == 3, "traductor no minimiza acciones");
+        Verificar(minimo.Traducir(L"abc").pasos.front().acorde == optimo.pasos.front().acorde, "traduccion no determinista");
+        Verificar(dic.CargarDesdeArchivo(argv[1], &error), "restaurar diccionario distribuido");
 
         BitacoraCID bitacora;
         bitacora.Anotar(L"cafe", 2);

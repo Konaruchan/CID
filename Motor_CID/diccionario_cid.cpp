@@ -331,3 +331,9 @@ bool DiccionarioCID::Buscar(const std::wstring& acorde_normalizado, EntradaDicci
     out = it->second;
     return true;
 }
+std::vector<std::pair<std::wstring, EntradaDiccionarioCID>> DiccionarioCID::EnumerarEntradas() const
+{
+    std::vector<std::pair<std::wstring, EntradaDiccionarioCID>> entradas(m_map.begin(), m_map.end());
+    std::sort(entradas.begin(), entradas.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    return entradas;
+}

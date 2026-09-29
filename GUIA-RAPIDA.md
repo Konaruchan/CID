@@ -1,10 +1,11 @@
-# CID 0.2 beta — guía rápida
+# CID 0.3 beta + MECACID — guía rápida
 
 1. Extrae todo el ZIP en una carpeta en la que puedas guardar archivos. No ejecutes el programa dentro del ZIP.
 2. Abre `Motor_CID.exe`. El primer arranque muestra el asistente de calibración.
-3. Abre el Bloc de notas para practicar. CID empieza activo y cambia la escritura del teclado.
-4. Pulsa hasta tres teclas del mapa CID para formar un acorde. Las piezas aparecen en la bitácora antes de asentarse.
-5. Mantén Espacio para impedir el asentado automático; suéltalo para asentar. D10 modifica la última pieza.
+3. Abre **MECACID** desde el icono junto al reloj para practicar en el taller. El motor externo queda pausado. Consulta [MECACID.md](MECACID.md).
+4. Para escribir fuera del taller, activa CID desde el icono y abre el Bloc de notas.
+5. Pulsa hasta tres teclas del mapa CID para formar un acorde. Las piezas aparecen en la bitácora antes de asentarse.
+6. Mantén Espacio para impedir el asentado automático; suéltalo para asentar. D10 modifica la última pieza.
 
 Haz clic en el icono de CID junto al reloj para **pausar**, **activar**, consultar **ayuda** o **salir**. Puede estar dentro de los iconos ocultos de Windows.
 
