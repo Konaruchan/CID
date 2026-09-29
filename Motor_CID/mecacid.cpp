@@ -63,7 +63,7 @@ void Texto(HDC dc,const std::wstring& t,RECT r,int tam=16,COLORREF color=Tinta,i
 }
 void Invalidar(){ if(g.ventana) InvalidateRect(g.ventana,nullptr,FALSE); }
 const MecaPaso* Actual(){ return g.paso<g.plan.pasos.size()?&g.plan.pasos[g.paso]:nullptr; }
-std::wstring Numero(size_t n){return std::to_wstring(n);}
+std::wstring Numero(ULONGLONG n){return std::to_wstring(n);}
 void LimpiarCaptura()
 {
  if(g.ventana)KillTimer(g.ventana,TimerAcorde);
@@ -220,7 +220,7 @@ void Dibujar(HDC dc)
  if(g.vista==0)
  {
   unsigned total=g.aciertos+g.errores;auto dur=g.tiempo+(g.activo?GetTickCount64()-g.inicio:0);
-  std::wstring vals[]={total?Numero(100*g.aciertos/total)+L" %":L"—",Numero(g.racha),dur>=1000?Numero(g.acordesCorrectos*60000/dur):L"—"};
+  std::wstring vals[]={total?Numero(100*g.aciertos/total)+L" %":L"—",Numero(g.racha),dur>=1000?Numero(g.acordesCorrectos*60000ULL/dur):L"—"};
   const wchar_t* labs[]={L"PRECISIÓN DE LA SESIÓN",L"RACHA ACTUAL",L"ACORDES / MINUTO"};
   for(int i=0;i<3;++i){int x=252+i*332;Caja(dc,R(x,221,314,70),Blanco,15);Texto(dc,labs[i],R(x+18,236,224,18),10,Suave,FW_BOLD);Texto(dc,vals[i],R(x+18,253,255,35),25,Tinta,FW_SEMIBOLD);}
  }
