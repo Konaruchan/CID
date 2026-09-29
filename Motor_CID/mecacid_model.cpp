@@ -134,15 +134,26 @@ std::wstring MecaModelo::Siguiente(int nivel, const std::map<std::wstring, MecaM
     auto candidatos = Ejercicios(nivel == 4 ? 2 : nivel);
     if (candidatos.empty()) return L"";
     if (nivel != 4) return candidatos[turno % candidatos.size()];
-    // Repaso de acordes con errores; si aún no hay historial, empieza por vocabulario.
-    std::wstring peor;
-    double necesidad = -1;
-    for (const auto& [acorde, entrada] : entradas)
-    {
-        auto it = marcas.find(acorde);
-        if (it == marcas.end() || !it->second.errores) continue;
-        double score = static_cast<double>(it->second.errores) / (1.0 + it->second.aciertos);
-        if (score > necesidad) { necesidad = score; peor = entrada.resultado_crudo; }
+    // Puntuar los pasos realmente elegidos por el traductor, incluidos D10.
+    // Una entrada puede tener acordes equivalentes: no prometer repasar uno que
+    // luego no aparece en la práctica, ni generar ejercicios QWERTY accidentales.
+    const auto iniciales = candidatos.size();
+    for (const auto& [acorde, entrada] : entradas) {
+        const auto texto = MecaMinusculas(entrada.resultado_crudo);
+        if (std::find(candidatos.begin(), candidatos.end(), texto) == candidatos.end()) candidatos.push_back(texto);
     }
-    return peor.empty() ? candidatos[turno % candidatos.size()] : peor;
+    std::wstring peor;
+    double necesidad = 0;
+    for (const auto& texto : candidatos) {
+        auto plan = Traducir(texto);
+        if (plan.alternativasQwerty || plan.pasos.empty()) continue;
+        double score = 0;
+        for (const auto& paso : plan.pasos) {
+            if (paso.tipo == MecaTipo::Asentar) continue;
+            auto it = marcas.find(paso.acorde);
+            if (it != marcas.end()) score = (std::max)(score, static_cast<double>(it->second.errores) / (1.0 + it->second.aciertos));
+        }
+        if (score > necesidad) { necesidad = score; peor = texto; }
+    }
+    return peor.empty() ? candidatos[turno % iniciales] : peor;
 }

@@ -294,7 +294,7 @@ void Distribuir()
  Mover(Iniciar,252,791,202,36,g.vista!=2);Mover(Siguiente,465,791,220,36,g.vista!=1);
  Mover(Pista,696,791,186,36,g.vista!=2);Mover(AnteriorPaso,907,791,145,36,g.vista==1);Mover(ProximoPaso,1064,791,166,36,g.vista==1);
  SetWindowTextW(g.controles[Siguiente],g.vista==2?L"Practicar mis errores":L"Siguiente ejercicio");
- RECT r{};GetClientRect(g.ventana,&r);auto nueva=Fuente((std::max)(12,17*r.bottom/VH));
+ RECT r{};GetClientRect(g.ventana,&r);auto nueva=Fuente((std::max)(12L,17*r.bottom/VH));
  SendMessageW(g.entrada,WM_SETFONT,reinterpret_cast<WPARAM>(nueva),TRUE);
  if(g.fuenteControles)DeleteObject(g.fuenteControles);g.fuenteControles=nueva;
  Invalidar();
@@ -399,7 +399,7 @@ void MECACID_Abrir()
  const wchar_t* levels[]={L"1  Teclas",L"2  Acordes",L"3  Palabras",L"4  Frases",L"5  Repaso"};
  for(int i=0;i<5;++i)CrearBoton(NivelBase+i,levels[i]);
  CrearBoton(Iniciar,L"Empezar / continuar");CrearBoton(Siguiente,L"Siguiente ejercicio");CrearBoton(Pista,L"Ocultar pistas");CrearBoton(AnteriorPaso,L"← Anterior");CrearBoton(ProximoPaso,L"Siguiente →");CrearBoton(Traducir,L"Descomponer →");
- g.entrada=CreateWindowExW(0,L"EDIT",L"hola mundo, mañana tomo café",WS_CHILD|WS_TABSTOP|ES_MULTILINE|ES_AUTOVSCROLL|WS_VSCROLL,0,0,10,10,g.ventana,reinterpret_cast<HMENU>(Entrada),g.instancia,nullptr);g.controles[Entrada]=g.entrada;SendMessageW(g.entrada,EM_SETLIMITTEXT,512,0);
+ g.entrada=CreateWindowExW(0,L"EDIT",L"hola mundo, mañana tomo café",WS_CHILD|WS_TABSTOP|ES_MULTILINE|ES_AUTOVSCROLL|WS_VSCROLL,0,0,10,10,g.ventana,reinterpret_cast<HMENU>(static_cast<INT_PTR>(Entrada)),g.instancia,nullptr);g.controles[Entrada]=g.entrada;SendMessageW(g.entrada,EM_SETLIMITTEXT,512,0);
  g.vista=0;NuevoEjercicio();Distribuir();SetTimer(g.ventana,TimerReloj,1000,nullptr);ShowWindow(g.ventana,SW_SHOW);UpdateWindow(g.ventana);SetForegroundWindow(g.ventana);
 }
 void MECACID_Cerrar(){if(g.ventana)SendMessageW(g.ventana,WM_CLOSE,0,0);}
@@ -460,7 +460,17 @@ int MECACID_PruebaVisual(HINSTANCE instancia,const DiccionarioCID& diccionario,c
   }
  }
  if(Actual()||g.errores||g.escrito!=g.plan.normalizado)return 5;
- CambiarVista(1);g.paso=2;Invalidar();
+ // Un fallo no avanza; Esc elimina acordes pendientes y el siguiente inicio es limpio.
+ CargarPlan(L"café");Comando(Iniciar);const size_t previo=g.paso;
+ Evaluar(L"INCORRECTO");if(g.paso!=previo||g.errores!=1)return 8;
+ MECACID_ProcesarTecla(VK_ESCAPE,1,true,0);if(g.activo||g.ventanaAcorde||!g.abajo.empty())return 9;
+ // La navegación didáctica no permite contabilizar un ejercicio parcialmente saltado.
+ CambiarVista(1);Comando(ProximoPaso);Comando(Iniciar);if(g.paso!=0||!g.escrito.empty())return 11;Pausar();
+ // QWERTY sin cobertura se valida por carácter y no se asienta una palabra parcial.
+ CargarPlan(L"☃");Comando(Iniciar);SendMessageW(g.ventana,WM_CHAR,L'☃',0);
+ if(!Actual())return 12;SendMessageW(g.ventana,WM_CHAR,L' ',0);
+ if(Actual()||g.escrito!=g.plan.normalizado)return 13;
+ CambiarVista(1);g.paso=2;g.explorando=true;Invalidar();
  if(!GuardarVista(directorio+L"\\mecacid-traductor.bmp"))return 6;
  CambiarVista(2);if(!GuardarVista(directorio+L"\\mecacid-progreso.bmp"))return 7;
  MECACID_Cerrar();return 0;

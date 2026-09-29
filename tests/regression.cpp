@@ -120,6 +120,9 @@ int wmain(int argc, wchar_t** argv)
                 reproducir(plan);
             }
         }
+        std::map<std::wstring,MecaMarca> debiles{{L"D10",{0,8}}};
+        auto repaso = tutor.Traducir(tutor.Siguiente(4, debiles, 0));
+        Verificar(std::any_of(repaso.pasos.begin(), repaso.pasos.end(), [](const auto& p){return p.tipo == MecaTipo::Modificador;}), "repaso ignora D10");
         Verificar(cargar("I1|a|1\nI2|ab|1\nI3|bc|1\nI4|c|1\n"), "diccionario de optimizacion");
         MecaModelo minimo(dic);
         auto optimo = minimo.Traducir(L"abc");
