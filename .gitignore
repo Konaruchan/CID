@@ -53,3 +53,5 @@ keyboard-calibration.json
 # =========================
 !keyboard-layout.json
 !cid0.cid
+# Distribuciones generadas
+dist/

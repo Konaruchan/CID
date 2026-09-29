@@ -20,6 +20,6 @@ jobs:
         run: ./scripts/build.ps1 -Platform '${{ matrix.platform }}'
       - uses: actions/upload-artifact@v4
         with:
-          name: CID-0.2-${{ matrix.platform }}
+          name: CID-MECACID-0.3-${{ matrix.platform }}
           path: dist/*
           if-no-files-found: error

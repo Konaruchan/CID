@@ -4,6 +4,7 @@
 // CID-11-02 : Incluye los tipos de texto y mapa hash usados por la interfaz del diccionario.
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 // CID-11-03 : Define la entrada pública del diccionario con resultado crudo y número tildal asociado.
 struct EntradaDiccionarioCID
@@ -19,6 +20,8 @@ public:
     // CID-11-05 : Declara la carga desde archivo y la búsqueda por acorde ya normalizado.
     bool CargarDesdeArchivo(const std::wstring& ruta, std::wstring* error = nullptr);
     bool Buscar(const std::wstring& acorde_normalizado, EntradaDiccionarioCID& out) const;
+
+    std::vector<std::pair<std::wstring, EntradaDiccionarioCID>> EnumerarEntradas() const;
 
 private:
     // CID-11-06 : Almacena el mapa interno de acordes canónicos hacia sus entradas de diccionario.

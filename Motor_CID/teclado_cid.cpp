@@ -8,6 +8,7 @@
 #include "engine_context.h"
 #include "event_bus.h"
 #include "platform.h"
+#include "mecacid.h"
 #include "detector_acorde.h"
 #include "gestor_asentado.h"
 
@@ -199,6 +200,13 @@ static LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam)
     // CID-02-22 : Nunca intercepta eventos generados por la propia inyección de texto del sistema CID.
     if ((k->flags & LLKHF_INJECTED) && k->dwExtraInfo == MARCA_ENTRADA_CID)
         return CallNextHookEx(TCtx().hook, nCode, wParam, lParam);
+
+    // MECACID recibe entrada local, sin alimentar la bitácora ni SendInput.
+    if (MECACID_TieneFoco())
+    {
+        if (MECACID_ProcesarTecla(vk, scanCode, presionada, k->flags)) return 1;
+        return CallNextHookEx(TCtx().hook, nCode, wParam, lParam);
+    }
 
     // CID-02-23 : Calcula el estado actual de modificadores del sistema para evitar interferir con atajos globales.
     const bool ctrl_activo = EstaCtrlActivo();

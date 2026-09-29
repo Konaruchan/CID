@@ -16,6 +16,7 @@
 #include "event_bus.h"
 #include "platform.h"
 #include "bandeja_cid.h"
+#include "mecacid.h"
 
 // CID-01-03 : Identificadores de hotkeys globales para salir del motor y alternar el modo CID.
 static const int HOTKEY_SALIR_ID = 1;
@@ -97,6 +98,7 @@ static std::wstring ResolverRutaKeyboardCalibrationJson()
 // CID-01-12 : Ejecuta la limpieza de emergencia deteniendo módulos activos, liberando hotkeys y soltando el mutex.
 static void LimpiezaFatal(bool hotkey_salir_ok, bool hotkey_toggle_ok, HANDLE mutex_instancia)
 {
+    MECACID_Cerrar();
     DetenerTecladoCID();
     DetenerDetectorAcorde();
     DetenerGestorAsentado();
@@ -112,8 +114,16 @@ static void LimpiezaFatal(bool hotkey_salir_ok, bool hotkey_toggle_ok, HANDLE mu
 }
 
 // CID-01-13 : Inicia el motor CID, valida recursos base, arranca módulos y mantiene el bucle principal.
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR argumentos, int)
 {
+    // Prueba reproducible de MECACID: sin hook, sin inyección y sin progreso del usuario.
+    if (std::wstring(argumentos) == L"--mecacid-smoke")
+    {
+        DiccionarioCID diccionario;
+        if (!diccionario.CargarDesdeArchivo(Unir(DirectorioExe(), L"Diccionarios\\cid0.cid"))) return 10;
+        return MECACID_PruebaVisual(hInstance, diccionario, DirectorioExe());
+    }
+
     // CID-01-14 : Registra en depuración el arranque del motor y sus hotkeys principales.
     Log(L"Motor CID iniciado (diccionario + bitácora + asentado).");
     Log(L"Hotkey salir: Ctrl + Shift + F9");
@@ -289,6 +299,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
         return 1;
     }
 
+    MECACID_Inicializar(hInstance, dic);
+
     // CID-01-34 : Inicia el gestor de asentado con retardo base y acceso a la bitácora principal.
     if (!IniciarGestorAsentado(400, &bitacora))
     {
@@ -335,6 +347,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
     // CID-01-39 : Mantiene el bucle de mensajes del proceso mientras el sistema siga activo.
     while ((resultadoMensaje = GetMessageW(&msg, nullptr, 0, 0)) > 0)
     {
+        // Volver al taller desde otra aplicación vuelve a pausar el motor externo.
+        if (MECACID_TieneFoco() && EstaModoCID())
+        {
+            EstablecerModoCID(false);
+            bandeja.Actualizar();
+            Superposicion_SetModoQwerty(true);
+        }
+
         // CID-01-40 : Filtra y procesa las hotkeys globales registradas por el motor.
         if (msg.message == WM_HOTKEY)
         {
@@ -348,6 +368,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
             // CID-01-42 : Alterna entre modo CID y QWERTY y actualiza la superposición visual.
             if (hotkey_toggle_ok && msg.wParam == HOTKEY_TOGGLE_CID_ID)
             {
+                if (MECACID_TieneFoco()) continue;
                 AlternarModoCID();
                 bandeja.Actualizar();
                 Superposicion_SetUltimoAsentado(EstaModoCID() ? L"MODO: CID" : L"MODO: QWERTY");
@@ -357,11 +378,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
         }
 
         // CID-01-43 : Reenvía al sistema los mensajes que no fueron consumidos por las hotkeys del motor.
+        if (MECACID_ProcesarMensaje(&msg)) continue;
         TranslateMessage(&msg);
         DispatchMessageW(&msg);
     }
 
     // CID-01-44 : Detiene de forma ordenada todos los módulos activos al salir del bucle principal.
+    MECACID_Cerrar();
     DetenerTecladoCID();
     DetenerDetectorAcorde();
     DetenerGestorAsentado();

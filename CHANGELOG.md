@@ -1,3 +1,12 @@
+# CID 0.3 beta — MECACID
+
+- Taller Win32 integrado con teclado visual calibrado, cinco niveles y práctica local.
+- Traductor QWERTY a secuencias CID mínimas, con D10 del motor y alternativas QWERTY explícitas.
+- Precisión, racha, ritmo, progreso persistente y repaso de errores.
+- Pausa al perder el foco; el entrenamiento no inyecta texto.
+- Regresión del traductor sobre el diccionario real y sesiones simuladas con vistas renderizadas en CI.
+- Incluye las correcciones de estabilidad de CID 0.2.
+
 # CID 0.2 beta
 
 Esta build conserva el sistema de acordes, la bitácora, D10 y los pedales descritos en la wiki. No inventa ni reasigna acordes: empaqueta `Motor_CID/cid0.cid`, que contiene las últimas correcciones del autor. La copia histórica de `Motor_CID/Diccionarios/cid0.cid` ya no se usa al compilar.
