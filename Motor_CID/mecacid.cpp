@@ -34,7 +34,7 @@ struct EstadoMeca {
  std::unique_ptr<MecaModelo> modelo;
  std::map<int,HWND> controles;
  HFONT fuenteControles=nullptr;
- int vista=0, nivel=0; size_t turno=0, paso=0;
+ int vista=0, nivel=0; size_t turno=0, paso=0, paginaProgreso=0;
  MecaPlan plan;
  bool activo=false, pista=true, ventanaAcorde=false, esperandoSoltar=false, espacioAbajo=false, demo=false, explorando=false;
  std::set<std::wstring> abajo, acorde;
@@ -125,7 +125,7 @@ void GuardarProgreso()
  const auto tmp=g.rutaProgreso+L".tmp";
  std::ofstream f(std::filesystem::path(tmp),std::ios::trunc);
  f<<"EJERCICIOS "<<g.ejercicios<<" 0\n";
- for(const auto& [k,v]:g.marcas)f<<std::string(k.begin(),k.end())<<' '<<v.aciertos<<' '<<v.errores<<'\n';
+ for(const auto& [k,v]:g.marcas){std::string key;for(wchar_t c:k)key.push_back(static_cast<char>(c));f<<key<<' '<<v.aciertos<<' '<<v.errores<<'\n';}
  f.close();g.guardadoCorrecto=static_cast<bool>(f)&&MoveFileExW(tmp.c_str(),g.rutaProgreso.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH);
  if(!g.guardadoCorrecto)DeleteFileW(tmp.c_str());
 }
@@ -176,8 +176,8 @@ void Dibujar(HDC dc)
  Texto(dc,L"MECACID",R(81,34,120,25),22,Blanco,FW_BOLD);Texto(dc,L"Tu taller de acordes",R(28,90,164,30),14,RGB(167,190,181));
  Texto(dc,L"ESCRIBIR SE APRENDE",R(28,139,168,20),10,RGB(148,174,164),FW_BOLD);
  Caja(dc,R(23,564,168,145),RGB(35,62,55),14);
- Texto(dc,L"De tecla a palabra",R(39,584,138,38),18,RGB(208,242,214),FW_SEMIBOLD);
- Texto(dc,L"Primero precisión.\nDespués ritmo.\nA tu velocidad.",R(39,629,133,66),14,RGB(181,208,196));
+ Texto(dc,L"De tecla a palabra",R(39,581,138,52),18,RGB(208,242,214),FW_SEMIBOLD);
+ Texto(dc,L"Primero precisión.\nDespués ritmo.\nA tu velocidad.",R(39,640,133,60),14,RGB(181,208,196));
  Texto(dc,L"PRÁCTICA LOCAL",R(28,751,168,22),11,RGB(183,222,192),FW_BOLD);
  Texto(dc,L"CID externo en pausa.\nNada sale de esta ventana.",R(28,777,168,46),12,RGB(158,184,172));
  std::wstring ceja=g.vista==0?L"ENTRENAMIENTO / PASO A PASO":g.vista==1?L"TRADUCTOR / QWERTY → CID":L"TU PROGRESO / EN ESTE EQUIPO";
@@ -203,9 +203,11 @@ void Dibujar(HDC dc)
   {
    std::vector<std::pair<std::wstring,MecaMarca>> rows(g.marcas.begin(),g.marcas.end());
    std::stable_sort(rows.begin(),rows.end(),[](const auto&a,const auto&b){return a.second.errores>b.second.errores;});
-   for(size_t i=0;i<(std::min)(rows.size(),size_t(7));++i)
+   const size_t desde=g.paginaProgreso*7;
+   Texto(dc,Numero(desde+1)+L"–"+Numero((std::min)(desde+7,rows.size()))+L" de "+Numero(rows.size()),R(1000,327,194,24),12,Suave,FW_NORMAL,DT_RIGHT|DT_SINGLELINE);
+   for(size_t i=desde;i<(std::min)(rows.size(),desde+7);++i)
    {
-    auto&[key,v]=rows[i];int y=408+static_cast<int>(i)*41;const unsigned t=v.aciertos+v.errores;int pct=t?static_cast<int>(100*v.aciertos/t):0;
+    auto&[key,v]=rows[i];int y=408+static_cast<int>(i-desde)*41;const unsigned t=v.aciertos+v.errores;int pct=t?static_cast<int>(100*v.aciertos/t):0;
     Texto(dc,key,R(279,y,228,26),15,Tinta,FW_SEMIBOLD);
     Caja(dc,R(528,y+7,320,8),Borde,8);if(pct)Caja(dc,R(528,y+7,320*pct/100,8),Verde,8);
     Texto(dc,Numero(pct)+L" %",R(876,y,78,25),14,Verde,FW_BOLD);
@@ -231,7 +233,9 @@ void Dibujar(HDC dc)
  Caja(dc,R(897,310,333,408),Blanco,18);
  const auto* actual=Actual();
  std::wstring objetivo=actual?actual->tipo==MecaTipo::Asentar?actual->fragmento:actual->tipo==MecaTipo::Qwerty?actual->fragmento:actual->acumulado:L"¡Completado!";
- Texto(dc,actual&&actual->tipo==MecaTipo::Asentar?L"CIERRA LA PALABRA":L"CONSTRUYE TU TEXTO",R(277,328,550,20),10,Suave,FW_BOLD);
+ std::wstring meta;
+ for(size_t i=g.paso;i<g.plan.pasos.size();++i){if(g.plan.pasos[i].tipo==MecaTipo::Asentar||g.plan.pasos[i].tipo==MecaTipo::Qwerty){meta=g.plan.pasos[i].fragmento;break;}}
+ Texto(dc,meta.empty()?L"PRÁCTICA COMPLETADA":L"Objetivo: «"+meta+L"»",R(277,328,550,20),12,Suave,FW_SEMIBOLD,DT_SINGLELINE|DT_END_ELLIPSIS);
  Texto(dc,objetivo,R(277,354,573,51),objetivo.size()>25?25:36,Tinta,FW_SEMIBOLD,DT_SINGLELINE|DT_END_ELLIPSIS);
  std::wstring instruccion=actual?(g.pista?actual->acorde+L"   /   "+CombinacionFisica(actual->acorde):L"Recuerda el acorde. La pista está oculta."):L"Pulsa Siguiente ejercicio para continuar.";
  Texto(dc,instruccion,R(277,411,567,42),17,Verde,FW_SEMIBOLD);
@@ -273,6 +277,7 @@ void Boton(HDC dc,const DRAWITEMSTRUCT& item)
  bool primario=id==Iniciar||id==Traducir;
  COLORREF bg=nav?(elegido?RGB(174,232,191):RGB(23,47,44)):primario?Verde:elegido?Menta:Blanco;
  if(item.itemState&ODS_SELECTED)bg=RGB(139,210,173);
+ HBRUSH fondoBoton=CreateSolidBrush(nav?RGB(23,47,44):Fondo);FillRect(dc,&item.rcItem,fondoBoton);DeleteObject(fondoBoton);
  Caja(dc,item.rcItem,bg,static_cast<int>(12*escala),nav||primario?bg:Borde);
  wchar_t texto[180]{};GetWindowTextW(item.hwndItem,texto,180);
  auto rect=item.rcItem;InflateRect(&rect,-8,-2);
@@ -292,7 +297,7 @@ void Distribuir()
  for(int i=0;i<5;++i)Mover(NivelBase+i,252+i*198,166,184,37,g.vista==0);
  Mover(Entrada,271,181,937,57,g.vista==1);Mover(Traducir,1032,262,197,35,g.vista==1);
  Mover(Iniciar,252,791,202,36,g.vista!=2);Mover(Siguiente,465,791,220,36,g.vista!=1);
- Mover(Pista,696,791,186,36,g.vista!=2);Mover(AnteriorPaso,907,791,145,36,g.vista==1);Mover(ProximoPaso,1064,791,166,36,g.vista==1);
+ Mover(Pista,696,791,186,36,g.vista!=2);Mover(AnteriorPaso,907,791,145,36,g.vista!=0);Mover(ProximoPaso,1064,791,166,36,g.vista!=0);
  SetWindowTextW(g.controles[Siguiente],g.vista==2?L"Practicar mis errores":L"Siguiente ejercicio");
  RECT r{};GetClientRect(g.ventana,&r);auto nueva=Fuente((std::max)(12L,17*r.bottom/VH));
  SendMessageW(g.entrada,WM_SETFONT,reinterpret_cast<WPARAM>(nueva),TRUE);
@@ -301,7 +306,7 @@ void Distribuir()
 }
 void CambiarVista(int vista)
 {
- Pausar();GuardarProgreso();g.vista=vista;
+ Pausar();GuardarProgreso();g.vista=vista;g.paginaProgreso=0;
  if(vista==0)NuevoEjercicio();
  if(vista==1){std::array<wchar_t,514> texto{};GetWindowTextW(g.entrada,texto.data(),static_cast<int>(texto.size()));CargarPlan(texto.data());}
  Distribuir();
@@ -323,6 +328,7 @@ void Comando(int id)
  if(id==Traducir){std::array<wchar_t,514> texto{};GetWindowTextW(g.entrada,texto.data(),static_cast<int>(texto.size()));CargarPlan(texto.data());return;}
  if(id==AnteriorPaso||id==ProximoPaso)
  {
+  if(g.vista==2){if(id==AnteriorPaso&&g.paginaProgreso)--g.paginaProgreso;if(id==ProximoPaso&&(g.paginaProgreso+1)*7<g.marcas.size())++g.paginaProgreso;Invalidar();return;}
   Pausar();g.explorando=true;if(id==AnteriorPaso&&g.paso)--g.paso;
   if(id==ProximoPaso&&g.paso+1<g.plan.pasos.size())++g.paso;
   g.feedback=L"Explora cada paso. Empezar practica el texto completo desde el principio.";Invalidar();
@@ -463,7 +469,10 @@ int MECACID_PruebaVisual(HINSTANCE instancia,const DiccionarioCID& diccionario,c
  // Un fallo no avanza; Esc elimina acordes pendientes y el siguiente inicio es limpio.
  CargarPlan(L"café");Comando(Iniciar);const size_t previo=g.paso;
  Evaluar(L"INCORRECTO");if(g.paso!=previo||g.errores!=1)return 8;
+ DWORD pendiente=0;ObtenerScanCodeDeNombreCID(Nombres(Actual()->acorde).begin()->c_str(),pendiente);
+ MECACID_ProcesarTecla(0,pendiente,true,0);if(!g.ventanaAcorde)return 14;
  MECACID_ProcesarTecla(VK_ESCAPE,1,true,0);if(g.activo||g.ventanaAcorde||!g.abajo.empty())return 9;
+ Comando(Iniciar);SendMessageW(g.ventana,WM_ACTIVATE,WA_INACTIVE,0);if(g.activo)return 15;
  // La navegación didáctica no permite contabilizar un ejercicio parcialmente saltado.
  CambiarVista(1);Comando(ProximoPaso);Comando(Iniciar);if(g.paso!=0||!g.escrito.empty())return 11;Pausar();
  // QWERTY sin cobertura se valida por carácter y no se asienta una palabra parcial.

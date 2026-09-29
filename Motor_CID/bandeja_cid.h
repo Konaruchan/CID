@@ -72,6 +72,7 @@ class BandejaCID
             else
             {
                 if (IsWindow(destino)) SetForegroundWindow(destino);
+                if (MECACID_TieneFoco()) reactivar = false;
                 EstablecerModoCID(reactivar);
                 Superposicion_SetModoQwerty(!reactivar);
                 Superposicion_SetUltimoAsentado(reactivar ? L"MODO: CID" : L"MODO: QWERTY (pausado)");

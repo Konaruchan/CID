@@ -18,6 +18,8 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="mecacid.cpp"><Filter>Archivos de origen</Filter></ClCompile>
+    <ClCompile Include="mecacid_model.cpp"><Filter>Archivos de origen</Filter></ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
@@ -59,6 +61,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="mecacid.h"><Filter>Archivos de encabezado</Filter></ClInclude>
+    <ClInclude Include="mecacid_model.h"><Filter>Archivos de encabezado</Filter></ClInclude>
     <ClInclude Include="teclado_cid.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>

@@ -347,6 +347,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR argumentos, int)
     // CID-01-39 : Mantiene el bucle de mensajes del proceso mientras el sistema siga activo.
     while ((resultadoMensaje = GetMessageW(&msg, nullptr, 0, 0)) > 0)
     {
+        // Volver al taller desde otra aplicación vuelve a pausar el motor externo.
+        if (MECACID_TieneFoco() && EstaModoCID())
+        {
+            EstablecerModoCID(false);
+            bandeja.Actualizar();
+            Superposicion_SetModoQwerty(true);
+        }
+
         // CID-01-40 : Filtra y procesa las hotkeys globales registradas por el motor.
         if (msg.message == WM_HOTKEY)
         {
